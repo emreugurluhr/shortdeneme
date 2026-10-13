@@ -1,4 +1,4 @@
-// Kullanım: node render_video.mjs  (önce: node ../../server.js ya da http://localhost:8765 üzerinde statik sunucu)
+// Kullanım: depo kökünde "npx http-server -p 8765 -c-1 ." çalışırken: node examples/cift-yarik/render_video.mjs (playwright gerekir)
 import { chromium } from 'playwright';
 import fs from 'fs';
 import path from 'path';
