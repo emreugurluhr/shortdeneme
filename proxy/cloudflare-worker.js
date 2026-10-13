@@ -4,7 +4,7 @@
 // Anahtarlar burada saklanmaz; uygulamanın gönderdiği başlıklar olduğu gibi iletilir.
 
 // Sadece bu sitelerden gelen isteklere izin verilir. Kendi adresiniz farklıysa ekleyin.
-const ALLOWED_ORIGINS = ['https://emreugurluhr.github.io'];
+const ALLOWED_ORIGINS = ['https://emreugurluhr.github.io', 'http://localhost:5000', 'http://127.0.0.1:5000'];
 
 // Sadece bu servislere iletilir (açık proxy olmasın diye).
 const ALLOWED_HOSTS = [

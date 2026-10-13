@@ -120,7 +120,8 @@
       <legend>Bağlantı (isteğe bağlı)</legend>
       <label for="proxyUrl">Ara sunucu adresi</label>
       <input type="text" id="proxyUrl" placeholder="https://shorts-proxy.kullanici.workers.dev" spellcheck="false" autocapitalize="off">
-      <p class="note">Bir servis "bağlantı kurulamadı / Load failed" hatası veriyorsa, o servis tarayıcıdan doğrudan erişime izin vermiyordur. Ücretsiz bir Cloudflare ara sunucusu kurup adresini buraya yazın. <a href="https://github.com/emreugurluhr/shortdeneme/blob/claude/selam-hyes7h/proxy/KURULUM.md" target="_blank" rel="noopener">Kurulum (5 dk) →</a></p>
+      <p class="note ok-note" id="proxyNote"></p>
+      <p class="note">Bir servis "bağlantı kurulamadı / Load failed" hatası veriyorsa, o servis tarayıcıdan doğrudan erişime izin vermiyordur. En kolayı uygulamayı bilgisayarınızda <code>node server.js</code> ile açmak (ara sunucu kendiliğinden çalışır); ya da ücretsiz bir Cloudflare ara sunucusu kurup adresini buraya yazın. <a href="https://github.com/emreugurluhr/shortdeneme/blob/claude/selam-hyes7h/proxy/KURULUM.md" target="_blank" rel="noopener">Kurulum (5 dk) →</a></p>
     </fieldset>
     <fieldset>
       <legend>Video</legend>

@@ -193,6 +193,8 @@ dialog fieldset { border: 1px solid var(--line); border-radius: 12px; padding: 4
 dialog legend { font-weight: 900; padding: 0 6px; }
 .note { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
 .note a { color: var(--gold); }
+.note.ok-note { color: var(--ok); }
+.note.ok-note:empty { display: none; }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media (max-width: 520px) { .two { grid-template-columns: 1fr; } }
 .check { display: flex; align-items: center; gap: 8px; margin-top: 10px; text-transform: none; letter-spacing: 0; color: var(--fg); font-weight: 700; font-size: 14px; }

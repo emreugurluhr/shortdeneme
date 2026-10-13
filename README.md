@@ -10,6 +10,20 @@ Bir konu yazarsınız, uygulama sırayla şunları yapar:
 
 Her şey tarayıcıda çalışır, sunucu gerekmez. API anahtarları sadece sizin tarayıcınızda (localStorage) saklanır; koda ya da depoya hiç yazılmaz.
 
+## Bilgisayarda çalıştırma (önerilen)
+
+```
+git clone -b claude/selam-hyes7h https://github.com/emreugurluhr/shortdeneme.git
+cd shortdeneme
+node server.js
+```
+
+Ardından **http://localhost:5000** adresini açın. Node.js 18 ya da üstü yeterli, ek paket gerekmez.
+Bu yerel sunucu, tarayıcıdan doğrudan çağrılamayan servislere (ör. OpenCode Go) giden istekleri
+bilgisayarınız üzerinden iletir; ayrıca ara sunucu kurmanız gerekmez.
+
+`index.html` dosyasına çift tıklayarak açmak çalışmaz (tarayıcı modülleri `file://` üzerinden yüklemez).
+
 ## Yayınlama (GitHub Pages)
 
 1. GitHub'da **Settings → Pages** sayfasını açın.

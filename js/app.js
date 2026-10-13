@@ -27,6 +27,7 @@ const state = {
   clock: null,
   source: null,
   downloadUrl: null,
+  localProxy: null,
 };
 
 // ---------------------------------------------------------------- yardımcılar
@@ -713,7 +714,7 @@ $('fetchModels').addEventListener('click', async () => {
   const btn = $('fetchModels');
   btn.disabled = true;
   btn.textContent = 'Getiriliyor…';
-  setProxy($('proxyUrl').value);
+  setProxy($('proxyUrl').value.trim() || state.localProxy);
   try {
     const models = await listModels({ ...draft, provider: shownProvider });
     if (!models.length) throw new Error('Servis boş bir model listesi döndürdü.');
@@ -726,7 +727,7 @@ $('fetchModels').addEventListener('click', async () => {
   } finally {
     btn.disabled = false;
     btn.textContent = 'Modelleri getir';
-    setProxy(state.settings.proxyUrl);
+    applyProxy();
   }
 });
 
@@ -742,7 +743,7 @@ $('settings').addEventListener('close', async () => {
   s.ambience = $('ambience').checked;
   s.captions = $('captions').checked;
   state.settings = s;
-  setProxy(s.proxyUrl);
+  applyProxy();
   if (!saveSettings(s)) toast('Ayarlar bu tarayıcıda kaydedilemedi (gizli sekme olabilir).', true);
   else toast(`Ayarlar kaydedildi · ${PROVIDERS[s.provider].label}`);
   invalidateAudio();
@@ -788,8 +789,24 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ---------------------------------------------------------------- başlangıç
+// Yerel sunucu (node server.js) ile açıldıysa ara sunucuyu otomatik kullan.
+function applyProxy() {
+  setProxy(state.settings.proxyUrl || state.localProxy || '');
+}
+
+async function detectLocalProxy() {
+  try {
+    const res = await fetch('__shorts_proxy', { cache: 'no-store' });
+    if (res.ok && (await res.json()).ok) {
+      state.localProxy = new URL('proxy', location.href).href;
+      $('proxyNote').textContent = 'Yerel sunucu algılandı: bağlantılar otomatik olarak bu bilgisayar üzerinden gidiyor. Bu kutuyu boş bırakabilirsiniz.';
+    }
+  } catch (_) { /* GitHub Pages ya da başka bir sunucu */ }
+}
+
 (async function init() {
-  setProxy(state.settings.proxyUrl);
+  await detectLocalProxy();
+  applyProxy();
   await loadFonts();
   state.project = (await loadProject()) || demoProject();
   state.images = await loadImages(state.project.arts);
