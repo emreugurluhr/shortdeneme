@@ -2075,8 +2075,8 @@ function drawStarburst(ctx, el, env, p) {
   ctx.globalAlpha = baseA * 0.6;
   ctx.stroke();
   ctx.restore();
-  // açılış halkası
-  if (p.lt < 1.2) {
+  // açılış halkası (ring:false ile kapatılır)
+  if (el.ring !== false && p.lt < 1.2) {
     const rk = clamp(p.lt / 1.2);
     ctx.globalAlpha = baseA * (1 - rk) * 0.6;
     ctx.strokeStyle = css(c, 1);

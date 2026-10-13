@@ -1,0 +1,1104 @@
+{
+ "duration": 67.552653,
+ "lines": [
+  "1801'de Thomas Young ışığı iki ince yarıktan geçirdi.",
+  "Ekranda iki çizgi bekledi.",
+  "Ama karşısında… birbirini güçlendiren ve söndüren çok sayıda aydınlık-karanlık çizgi vardı.",
+  "Işık, iki dalga gibi davranıp girişim deseni oluşturmuştu.",
+  "Bu, ışığın parçacık değil, dalga olduğu fikrini güçlendirdi.",
+  "Peki ya tek tek gönderilen elektronlar?",
+  "1961'de Claus Jönsson elektronlarla çift yarık deneyini yaptı.",
+  "1989'da Tonomura tek tek elektronlarla tekrarladı.",
+  "Önce ekranda rastgele noktalar göründü.",
+  "Sonra noktalar birikti… ve girişim deseni ortaya çıktı.",
+  "Tek bir elektron bile sanki iki yarıktan birden geçiyormuş gibi.",
+  "Ama hangi yarıktan geçtiğini ölçtüğünüz an… desen kayboldu.",
+  "Aynı elektron, izlendiğinde parçacık gibi davranıyor.",
+  "İzlenmediğinde ise dalga gibi.",
+  "Maddenin de dalga özelliği taşıdığı ortaya çıkıyor.",
+  "Kuantum mekaniğinin en ünlü gizemlerinden biri bu.",
+  "Gerçeklik, bakışınla değişiyor gibi.",
+  "Bir düşünsene…",
+  "Sen bakmasan… elektron hangi yarıktan geçerdi?"
+ ],
+ "words": [
+  {
+   "text": "1801'de",
+   "start": 0.0,
+   "end": 1.266,
+   "line": 0,
+   "lineEnd": false
+  },
+  {
+   "text": "Thomas",
+   "start": 1.452,
+   "end": 1.77,
+   "line": 0,
+   "lineEnd": false
+  },
+  {
+   "text": "Young",
+   "start": 1.77,
+   "end": 1.929,
+   "line": 0,
+   "lineEnd": false
+  },
+  {
+   "text": "ışığı",
+   "start": 1.929,
+   "end": 2.405,
+   "line": 0,
+   "lineEnd": false
+  },
+  {
+   "text": "iki",
+   "start": 2.405,
+   "end": 2.723,
+   "line": 0,
+   "lineEnd": false
+  },
+  {
+   "text": "ince",
+   "start": 2.723,
+   "end": 3.041,
+   "line": 0,
+   "lineEnd": false
+  },
+  {
+   "text": "yarıktan",
+   "start": 3.041,
+   "end": 3.518,
+   "line": 0,
+   "lineEnd": false
+  },
+  {
+   "text": "geçirdi.",
+   "start": 3.518,
+   "end": 3.994,
+   "line": 0,
+   "lineEnd": true
+  },
+  {
+   "text": "Ekranda",
+   "start": 4.695,
+   "end": 5.157,
+   "line": 1,
+   "lineEnd": false
+  },
+  {
+   "text": "iki",
+   "start": 5.157,
+   "end": 5.465,
+   "line": 1,
+   "lineEnd": false
+  },
+  {
+   "text": "çizgi",
+   "start": 5.465,
+   "end": 5.773,
+   "line": 1,
+   "lineEnd": false
+  },
+  {
+   "text": "bekledi.",
+   "start": 5.773,
+   "end": 6.234,
+   "line": 1,
+   "lineEnd": true
+  },
+  {
+   "text": "Ama",
+   "start": 6.784,
+   "end": 7.081,
+   "line": 2,
+   "lineEnd": false
+  },
+  {
+   "text": "karşısında…",
+   "start": 7.081,
+   "end": 7.675,
+   "line": 2,
+   "lineEnd": false
+  },
+  {
+   "text": "birbirini",
+   "start": 8.061,
+   "end": 8.693,
+   "line": 2,
+   "lineEnd": false
+  },
+  {
+   "text": "güçlendiren",
+   "start": 8.693,
+   "end": 9.325,
+   "line": 2,
+   "lineEnd": false
+  },
+  {
+   "text": "ve",
+   "start": 9.325,
+   "end": 9.483,
+   "line": 2,
+   "lineEnd": false
+  },
+  {
+   "text": "söndüren",
+   "start": 9.483,
+   "end": 9.958,
+   "line": 2,
+   "lineEnd": false
+  },
+  {
+   "text": "çok",
+   "start": 9.958,
+   "end": 10.116,
+   "line": 2,
+   "lineEnd": false
+  },
+  {
+   "text": "sayıda",
+   "start": 10.116,
+   "end": 10.59,
+   "line": 2,
+   "lineEnd": false
+  },
+  {
+   "text": "aydınlık-karanlık",
+   "start": 10.59,
+   "end": 11.538,
+   "line": 2,
+   "lineEnd": false
+  },
+  {
+   "text": "çizgi",
+   "start": 11.538,
+   "end": 11.854,
+   "line": 2,
+   "lineEnd": false
+  },
+  {
+   "text": "vardı.",
+   "start": 11.854,
+   "end": 12.17,
+   "line": 2,
+   "lineEnd": true
+  },
+  {
+   "text": "Işık,",
+   "start": 12.753,
+   "end": 13.109,
+   "line": 3,
+   "lineEnd": false
+  },
+  {
+   "text": "iki",
+   "start": 13.332,
+   "end": 13.613,
+   "line": 3,
+   "lineEnd": false
+  },
+  {
+   "text": "dalga",
+   "start": 13.613,
+   "end": 13.893,
+   "line": 3,
+   "lineEnd": false
+  },
+  {
+   "text": "gibi",
+   "start": 13.893,
+   "end": 14.174,
+   "line": 3,
+   "lineEnd": false
+  },
+  {
+   "text": "davranıp",
+   "start": 14.174,
+   "end": 14.594,
+   "line": 3,
+   "lineEnd": false
+  },
+  {
+   "text": "girişim",
+   "start": 14.594,
+   "end": 15.015,
+   "line": 3,
+   "lineEnd": false
+  },
+  {
+   "text": "deseni",
+   "start": 15.015,
+   "end": 15.436,
+   "line": 3,
+   "lineEnd": false
+  },
+  {
+   "text": "oluşturmuştu.",
+   "start": 15.436,
+   "end": 16.137,
+   "line": 3,
+   "lineEnd": true
+  },
+  {
+   "text": "Bu,",
+   "start": 16.747,
+   "end": 16.956,
+   "line": 4,
+   "lineEnd": false
+  },
+  {
+   "text": "ışığın",
+   "start": 17.258,
+   "end": 17.716,
+   "line": 4,
+   "lineEnd": false
+  },
+  {
+   "text": "parçacık",
+   "start": 17.716,
+   "end": 18.174,
+   "line": 4,
+   "lineEnd": false
+  },
+  {
+   "text": "değil,",
+   "start": 18.174,
+   "end": 18.479,
+   "line": 4,
+   "lineEnd": false
+  },
+  {
+   "text": "dalga",
+   "start": 18.695,
+   "end": 18.988,
+   "line": 4,
+   "lineEnd": false
+  },
+  {
+   "text": "olduğu",
+   "start": 18.988,
+   "end": 19.429,
+   "line": 4,
+   "lineEnd": false
+  },
+  {
+   "text": "fikrini",
+   "start": 19.429,
+   "end": 19.869,
+   "line": 4,
+   "lineEnd": false
+  },
+  {
+   "text": "güçlendirdi.",
+   "start": 19.869,
+   "end": 20.456,
+   "line": 4,
+   "lineEnd": true
+  },
+  {
+   "text": "Peki",
+   "start": 21.023,
+   "end": 21.356,
+   "line": 5,
+   "lineEnd": false
+  },
+  {
+   "text": "ya",
+   "start": 21.356,
+   "end": 21.522,
+   "line": 5,
+   "lineEnd": false
+  },
+  {
+   "text": "tek",
+   "start": 21.522,
+   "end": 21.689,
+   "line": 5,
+   "lineEnd": false
+  },
+  {
+   "text": "tek",
+   "start": 21.689,
+   "end": 21.855,
+   "line": 5,
+   "lineEnd": false
+  },
+  {
+   "text": "gönderilen",
+   "start": 21.855,
+   "end": 22.521,
+   "line": 5,
+   "lineEnd": false
+  },
+  {
+   "text": "elektronlar?",
+   "start": 22.521,
+   "end": 23.187,
+   "line": 5,
+   "lineEnd": true
+  },
+  {
+   "text": "1961'de",
+   "start": 23.808,
+   "end": 25.247,
+   "line": 6,
+   "lineEnd": false
+  },
+  {
+   "text": "Claus",
+   "start": 25.247,
+   "end": 25.427,
+   "line": 6,
+   "lineEnd": false
+  },
+  {
+   "text": "Jönsson",
+   "start": 25.427,
+   "end": 25.787,
+   "line": 6,
+   "lineEnd": false
+  },
+  {
+   "text": "elektronlarla",
+   "start": 25.787,
+   "end": 26.687,
+   "line": 6,
+   "lineEnd": false
+  },
+  {
+   "text": "çift",
+   "start": 26.687,
+   "end": 26.866,
+   "line": 6,
+   "lineEnd": false
+  },
+  {
+   "text": "yarık",
+   "start": 26.866,
+   "end": 27.226,
+   "line": 6,
+   "lineEnd": false
+  },
+  {
+   "text": "deneyini",
+   "start": 27.226,
+   "end": 27.946,
+   "line": 6,
+   "lineEnd": false
+  },
+  {
+   "text": "yaptı.",
+   "start": 27.946,
+   "end": 28.305,
+   "line": 6,
+   "lineEnd": true
+  },
+  {
+   "text": "1989'da",
+   "start": 28.945,
+   "end": 30.327,
+   "line": 7,
+   "lineEnd": false
+  },
+  {
+   "text": "Tonomura",
+   "start": 30.62,
+   "end": 31.266,
+   "line": 7,
+   "lineEnd": false
+  },
+  {
+   "text": "tek",
+   "start": 31.266,
+   "end": 31.427,
+   "line": 7,
+   "lineEnd": false
+  },
+  {
+   "text": "tek",
+   "start": 31.427,
+   "end": 31.589,
+   "line": 7,
+   "lineEnd": false
+  },
+  {
+   "text": "elektronlarla",
+   "start": 31.589,
+   "end": 32.396,
+   "line": 7,
+   "lineEnd": false
+  },
+  {
+   "text": "tekrarladı.",
+   "start": 32.396,
+   "end": 33.043,
+   "line": 7,
+   "lineEnd": true
+  },
+  {
+   "text": "Önce",
+   "start": 33.557,
+   "end": 33.871,
+   "line": 8,
+   "lineEnd": false
+  },
+  {
+   "text": "ekranda",
+   "start": 33.871,
+   "end": 34.342,
+   "line": 8,
+   "lineEnd": false
+  },
+  {
+   "text": "rastgele",
+   "start": 34.342,
+   "end": 34.813,
+   "line": 8,
+   "lineEnd": false
+  },
+  {
+   "text": "noktalar",
+   "start": 34.813,
+   "end": 35.285,
+   "line": 8,
+   "lineEnd": false
+  },
+  {
+   "text": "göründü.",
+   "start": 35.285,
+   "end": 35.756,
+   "line": 8,
+   "lineEnd": true
+  },
+  {
+   "text": "Sonra",
+   "start": 36.254,
+   "end": 36.592,
+   "line": 9,
+   "lineEnd": false
+  },
+  {
+   "text": "noktalar",
+   "start": 36.592,
+   "end": 37.099,
+   "line": 9,
+   "lineEnd": false
+  },
+  {
+   "text": "birikti…",
+   "start": 37.099,
+   "end": 37.607,
+   "line": 9,
+   "lineEnd": false
+  },
+  {
+   "text": "ve",
+   "start": 38.011,
+   "end": 38.146,
+   "line": 9,
+   "lineEnd": false
+  },
+  {
+   "text": "girişim",
+   "start": 38.146,
+   "end": 38.553,
+   "line": 9,
+   "lineEnd": false
+  },
+  {
+   "text": "deseni",
+   "start": 38.553,
+   "end": 38.96,
+   "line": 9,
+   "lineEnd": false
+  },
+  {
+   "text": "ortaya",
+   "start": 38.96,
+   "end": 39.368,
+   "line": 9,
+   "lineEnd": false
+  },
+  {
+   "text": "çıktı.",
+   "start": 39.368,
+   "end": 39.639,
+   "line": 9,
+   "lineEnd": true
+  },
+  {
+   "text": "Tek",
+   "start": 40.123,
+   "end": 40.273,
+   "line": 10,
+   "lineEnd": false
+  },
+  {
+   "text": "bir",
+   "start": 40.273,
+   "end": 40.423,
+   "line": 10,
+   "lineEnd": false
+  },
+  {
+   "text": "elektron",
+   "start": 40.423,
+   "end": 40.873,
+   "line": 10,
+   "lineEnd": false
+  },
+  {
+   "text": "bile",
+   "start": 40.873,
+   "end": 41.173,
+   "line": 10,
+   "lineEnd": false
+  },
+  {
+   "text": "sanki",
+   "start": 41.173,
+   "end": 41.472,
+   "line": 10,
+   "lineEnd": false
+  },
+  {
+   "text": "iki",
+   "start": 41.472,
+   "end": 41.772,
+   "line": 10,
+   "lineEnd": false
+  },
+  {
+   "text": "yarıktan",
+   "start": 41.772,
+   "end": 42.222,
+   "line": 10,
+   "lineEnd": false
+  },
+  {
+   "text": "birden",
+   "start": 42.222,
+   "end": 42.522,
+   "line": 10,
+   "lineEnd": false
+  },
+  {
+   "text": "geçiyormuş",
+   "start": 42.522,
+   "end": 43.121,
+   "line": 10,
+   "lineEnd": false
+  },
+  {
+   "text": "gibi.",
+   "start": 43.121,
+   "end": 43.421,
+   "line": 10,
+   "lineEnd": true
+  },
+  {
+   "text": "Ama",
+   "start": 44.131,
+   "end": 44.422,
+   "line": 11,
+   "lineEnd": false
+  },
+  {
+   "text": "hangi",
+   "start": 44.422,
+   "end": 44.714,
+   "line": 11,
+   "lineEnd": false
+  },
+  {
+   "text": "yarıktan",
+   "start": 44.714,
+   "end": 45.151,
+   "line": 11,
+   "lineEnd": false
+  },
+  {
+   "text": "geçtiğini",
+   "start": 45.151,
+   "end": 45.734,
+   "line": 11,
+   "lineEnd": false
+  },
+  {
+   "text": "ölçtüğünüz",
+   "start": 45.734,
+   "end": 46.317,
+   "line": 11,
+   "lineEnd": false
+  },
+  {
+   "text": "an…",
+   "start": 46.317,
+   "end": 46.462,
+   "line": 11,
+   "lineEnd": false
+  },
+  {
+   "text": "desen",
+   "start": 46.846,
+   "end": 47.178,
+   "line": 11,
+   "lineEnd": false
+  },
+  {
+   "text": "kayboldu.",
+   "start": 47.178,
+   "end": 47.676,
+   "line": 11,
+   "lineEnd": true
+  },
+  {
+   "text": "Aynı",
+   "start": 48.365,
+   "end": 48.702,
+   "line": 12,
+   "lineEnd": false
+  },
+  {
+   "text": "elektron,",
+   "start": 48.702,
+   "end": 49.208,
+   "line": 12,
+   "lineEnd": false
+  },
+  {
+   "text": "izlendiğinde",
+   "start": 49.435,
+   "end": 50.097,
+   "line": 12,
+   "lineEnd": false
+  },
+  {
+   "text": "parçacık",
+   "start": 50.097,
+   "end": 50.494,
+   "line": 12,
+   "lineEnd": false
+  },
+  {
+   "text": "gibi",
+   "start": 50.494,
+   "end": 50.759,
+   "line": 12,
+   "lineEnd": false
+  },
+  {
+   "text": "davranıyor.",
+   "start": 50.759,
+   "end": 51.288,
+   "line": 12,
+   "lineEnd": true
+  },
+  {
+   "text": "İzlenmediğinde",
+   "start": 51.786,
+   "end": 52.663,
+   "line": 13,
+   "lineEnd": false
+  },
+  {
+   "text": "ise",
+   "start": 52.663,
+   "end": 52.956,
+   "line": 13,
+   "lineEnd": false
+  },
+  {
+   "text": "dalga",
+   "start": 52.956,
+   "end": 53.248,
+   "line": 13,
+   "lineEnd": false
+  },
+  {
+   "text": "gibi.",
+   "start": 53.248,
+   "end": 53.54,
+   "line": 13,
+   "lineEnd": true
+  },
+  {
+   "text": "Maddenin",
+   "start": 54.102,
+   "end": 54.484,
+   "line": 14,
+   "lineEnd": false
+  },
+  {
+   "text": "de",
+   "start": 54.484,
+   "end": 54.611,
+   "line": 14,
+   "lineEnd": false
+  },
+  {
+   "text": "dalga",
+   "start": 54.611,
+   "end": 54.865,
+   "line": 14,
+   "lineEnd": false
+  },
+  {
+   "text": "özelliği",
+   "start": 54.865,
+   "end": 55.374,
+   "line": 14,
+   "lineEnd": false
+  },
+  {
+   "text": "taşıdığı",
+   "start": 55.374,
+   "end": 55.883,
+   "line": 14,
+   "lineEnd": false
+  },
+  {
+   "text": "ortaya",
+   "start": 55.883,
+   "end": 56.265,
+   "line": 14,
+   "lineEnd": false
+  },
+  {
+   "text": "çıkıyor.",
+   "start": 56.265,
+   "end": 56.647,
+   "line": 14,
+   "lineEnd": true
+  },
+  {
+   "text": "Kuantum",
+   "start": 57.168,
+   "end": 57.598,
+   "line": 15,
+   "lineEnd": false
+  },
+  {
+   "text": "mekaniğinin",
+   "start": 57.598,
+   "end": 58.314,
+   "line": 15,
+   "lineEnd": false
+  },
+  {
+   "text": "en",
+   "start": 58.314,
+   "end": 58.457,
+   "line": 15,
+   "lineEnd": false
+  },
+  {
+   "text": "ünlü",
+   "start": 58.457,
+   "end": 58.743,
+   "line": 15,
+   "lineEnd": false
+  },
+  {
+   "text": "gizemlerinden",
+   "start": 58.743,
+   "end": 59.459,
+   "line": 15,
+   "lineEnd": false
+  },
+  {
+   "text": "biri",
+   "start": 59.459,
+   "end": 59.745,
+   "line": 15,
+   "lineEnd": false
+  },
+  {
+   "text": "bu.",
+   "start": 59.745,
+   "end": 59.888,
+   "line": 15,
+   "lineEnd": true
+  },
+  {
+   "text": "Gerçeklik,",
+   "start": 60.483,
+   "end": 60.948,
+   "line": 16,
+   "lineEnd": false
+  },
+  {
+   "text": "bakışınla",
+   "start": 60.948,
+   "end": 61.568,
+   "line": 16,
+   "lineEnd": false
+  },
+  {
+   "text": "değişiyor",
+   "start": 61.568,
+   "end": 62.189,
+   "line": 16,
+   "lineEnd": false
+  },
+  {
+   "text": "gibi.",
+   "start": 62.189,
+   "end": 62.499,
+   "line": 16,
+   "lineEnd": true
+  },
+  {
+   "text": "Bir",
+   "start": 63.115,
+   "end": 63.242,
+   "line": 17,
+   "lineEnd": false
+  },
+  {
+   "text": "düşünsene…",
+   "start": 63.242,
+   "end": 63.749,
+   "line": 17,
+   "lineEnd": true
+  },
+  {
+   "text": "Sen",
+   "start": 64.26,
+   "end": 64.466,
+   "line": 18,
+   "lineEnd": false
+  },
+  {
+   "text": "bakmasan…",
+   "start": 64.466,
+   "end": 65.085,
+   "line": 18,
+   "lineEnd": false
+  },
+  {
+   "text": "elektron",
+   "start": 65.544,
+   "end": 66.005,
+   "line": 18,
+   "lineEnd": false
+  },
+  {
+   "text": "hangi",
+   "start": 66.005,
+   "end": 66.313,
+   "line": 18,
+   "lineEnd": false
+  },
+  {
+   "text": "yarıktan",
+   "start": 66.313,
+   "end": 66.775,
+   "line": 18,
+   "lineEnd": false
+  },
+  {
+   "text": "geçerdi?",
+   "start": 66.775,
+   "end": 67.237,
+   "line": 18,
+   "lineEnd": true
+  }
+ ],
+ "chunks": [
+  [
+   0.0,
+   1.26649
+  ],
+  [
+   1.45195,
+   3.99438
+  ],
+  [
+   4.69531,
+   6.23435
+  ],
+  [
+   6.78365,
+   7.67515
+  ],
+  [
+   8.06118,
+   12.17
+  ],
+  [
+   12.7534,
+   13.1086
+  ],
+  [
+   13.3322,
+   16.1369
+  ],
+  [
+   16.7466,
+   16.956
+  ],
+  [
+   17.2578,
+   18.4789
+  ],
+  [
+   18.6948,
+   20.4559
+  ],
+  [
+   21.0231,
+   23.1871
+  ],
+  [
+   23.8083,
+   28.3055
+  ],
+  [
+   28.945,
+   30.327
+  ],
+  [
+   30.6197,
+   33.0426
+  ],
+  [
+   33.5569,
+   35.7559
+  ],
+  [
+   36.2539,
+   37.6067
+  ],
+  [
+   38.0107,
+   39.6389
+  ],
+  [
+   40.1234,
+   43.4209
+  ],
+  [
+   44.1307,
+   46.4625
+  ],
+  [
+   46.8464,
+   47.6757
+  ],
+  [
+   48.3654,
+   49.208
+  ],
+  [
+   49.4351,
+   51.2884
+  ],
+  [
+   51.7865,
+   53.54
+  ],
+  [
+   54.1019,
+   56.6469
+  ],
+  [
+   57.1682,
+   59.8883
+  ],
+  [
+   60.4825,
+   62.4993
+  ],
+  [
+   63.115,
+   63.7492
+  ],
+  [
+   64.2603,
+   65.0848
+  ],
+  [
+   65.5436,
+   67.237
+  ]
+ ],
+ "assign": [
+  [
+   0,
+   2
+  ],
+  [
+   2,
+   3
+  ],
+  [
+   3,
+   5
+  ],
+  [
+   5,
+   7
+  ],
+  [
+   7,
+   10
+  ],
+  [
+   10,
+   11
+  ],
+  [
+   11,
+   12
+  ],
+  [
+   12,
+   14
+  ],
+  [
+   14,
+   15
+  ],
+  [
+   15,
+   17
+  ],
+  [
+   17,
+   18
+  ],
+  [
+   18,
+   20
+  ],
+  [
+   20,
+   22
+  ],
+  [
+   22,
+   23
+  ],
+  [
+   23,
+   24
+  ],
+  [
+   24,
+   25
+  ],
+  [
+   25,
+   26
+  ],
+  [
+   26,
+   27
+  ],
+  [
+   27,
+   29
+  ]
+ ]
+}

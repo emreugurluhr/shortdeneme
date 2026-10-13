@@ -5,6 +5,7 @@
 import { apiFetch } from './net.js';
 import { HUD_DOC } from './elements/hud.js';
 import { SCENERY_DOC } from './elements/scenery.js';
+import { PHYSICS_DOC } from './elements/physics.js';
 import { ART_STYLE_DOC } from './artguide.js';
 import { LINT_DOC } from './layout.js';
 
@@ -330,12 +331,19 @@ ${HUD_DOC}
 
 ${SCENERY_DOC}
 
+${PHYSICS_DOC}
+
 ÇİZİM STİLİ
 ${ART_STYLE_DOC}
 
 SAHNE ALANLARI
-  {"from":0,"to":1,"background"?:"…" (sadece bu sahnede farklı arka plan gerekiyorsa),"transition":"fade"|"zoom"|"slide"|"flash","camera":{"zoom":[1,1.06],"panX":0,"panY":0},"elements":[...],
-   "sfx":[{"cue":"kelime","prompt":"short English sound effect description","duration":1.5,"volume":0.6}]}`;
+  {"from":0,"to":1,"background"?:"…" (sadece bu sahnede farklı arka plan gerekiyorsa),"transition":"fade"|"zoom"|"slide"|"flash"|"none","camera":{"zoom":[1,1.06],"panX":0,"panY":0},"elements":[...],
+   "sfx":[{"cue":"kelime","prompt":"short English sound effect description","duration":1.5,"volume":0.6}]}
+  Kalıcı düzenek (isteğe bağlı): plan.stage = [öğeler] her sahnede, sahne öğelerinden önce çizilir; zamanları mutlak sn
+  (at / [[t,v],...] anahtar dizileri). O zaman sahneler "transition":"none" ve anahtar kareli kamera kullanır:
+  "camera":{"from":{"cx":540,"cy":960,"zoom":1},"to":{"cx":540,"cy":700,"zoom":1.4},"at":0,"dur":1.2,"ease":"inOut"|"out"|"linear"}
+  (dünya noktası cx,cy ekran merkezine gelir; her sahnenin from'u öncekinin to'suna eşit olmalı).
+  Her öğede "fixed":true → kameradan bağımsız, ekran koordinatı (başlık, alt şema). opacity/x/y/scale da anahtar dizisi olabilir.`;
 
 const LAYOUT = `TASARIM KURALLARI (çok önemli — amatör görünen videoların sebebi bunlara uymamak)
 Ekran ve yerleşim

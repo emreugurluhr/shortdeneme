@@ -17,7 +17,10 @@
 const CORE_TYPES = ['text', 'counter', 'gear', 'waves', 'meter', 'chips', 'shape', 'equalizer', 'particles', 'art', 'flash', 'shake'];
 const HUD_TYPES = ['label', 'panel', 'clock', 'spectrum', 'sine', 'readout', 'bracket', 'badge'];
 const SCENERY_TYPES = ['orb', 'accretion', 'spacegrid', 'rays', 'silhouette', 'starburst'];
-export const KNOWN_TYPES = [...CORE_TYPES, ...HUD_TYPES, ...SCENERY_TYPES];
+// fizik düzeneği (js/elements/physics.js): ortak dünya geometrisiyle çizilir, yerinden oynatılmaz
+const PHYSICS_TYPES = ['wavefield', 'barrier', 'emitter', 'detector', 'eye', 'superpose'];
+const RIG_TYPES = new Set(['wavefield', 'barrier', 'emitter', 'detector']);
+export const KNOWN_TYPES = [...CORE_TYPES, ...HUD_TYPES, ...SCENERY_TYPES, ...PHYSICS_TYPES];
 
 // Zayıf modellerin sık uydurduğu tür adları → gerçek tür
 const ALIASES = {
@@ -38,7 +41,7 @@ const TEXTLIKE = new Set(['text', 'label', 'counter', 'readout']);
 const OBSTACLE = new Set(['art', 'orb', 'accretion', 'gear']);
 const DATA_OBSTACLE = new Set(['spectrum', 'sine', 'clock', 'meter', 'badge', 'chips', 'equalizer']);
 // yer değiştirmeyen atmosfer/dekor öğeleri (tam ekran, ışık, zemin silueti)
-const DECOR = new Set(['particles', 'rays', 'silhouette', 'flash', 'shake', 'starburst']);
+const DECOR = new Set(['particles', 'rays', 'silhouette', 'flash', 'shake', 'starburst', ...PHYSICS_TYPES]);
 // bir ana görselle aynı merkezdeyse onunla birlikte taşınan/ölçeklenen öğeler
 const FOLLOWER = new Set(['starburst', 'bracket', 'shape', 'rays', 'waves']);
 const ANCHOR = new Set(['art', 'orb', 'accretion', 'gear', 'clock', 'panel']);
@@ -79,6 +82,9 @@ function num(v, d) {
   if (v === null || v === undefined || v === '') return d;
   const n = Number(v);
   return Number.isFinite(n) ? n : d;
+}
+function isKeyframes(v) {
+  return Array.isArray(v) && v.length > 0 && v.every((e) => Array.isArray(e) && e.length >= 2 && Number.isFinite(Number(e[0])));
 }
 function clone(o) {
   return o === undefined ? undefined : JSON.parse(JSON.stringify(o));
@@ -483,12 +489,20 @@ function sanitizeElement(raw, tag, notes, extraTypes) {
     }
   }
   el.type = type;
+  // fizik öğelerinin alanları (anahtar dizileri, sayısal "glow" vb.) çizicinin kendi sözleşmesidir
+  if (PHYSICS_TYPES.includes(type)) {
+    if (el.in !== undefined && !IN_ANIMS.has(el.in)) el.in = 'fade';
+    if (el.loop !== undefined && el.loop !== null && !LOOPS.has(el.loop)) delete el.loop;
+    if (el.cue !== undefined && typeof el.cue !== 'string') delete el.cue;
+    return el;
+  }
 
   // sayılar
   NUMERIC.forEach((k) => {
     if (!(k in el)) return;
     const v = el[k];
     if (typeof v === 'number' && Number.isFinite(v)) return;
+    if (isKeyframes(v)) return; // [[t, v], ...] anahtar dizisi (motor kv ile çözer)
     if (typeof v === 'string') {
       const m = /^\s*(-?\d*\.?\d+)\s*(px|s|sn|deg|°)?\s*$/i.exec(v);
       if (m) { el[k] = Number(m[1]); return; }
@@ -519,6 +533,10 @@ function sanitizeElement(raw, tag, notes, extraTypes) {
   const fixKey = (obj, k, where) => {
     if (!(k in obj)) return;
     const v = obj[k];
+    if (isKeyframes(v)) {
+      v.forEach((e) => { const c = fixColor(e[1]); if (c !== undefined) e[1] = c; });
+      return;
+    }
     if (typeof v === 'boolean' && BOOL_COLOR.has(k)) return;
     if (v === null || v === 'none' || v === '') { delete obj[k]; return; }
     const c = fixColor(v);
@@ -609,11 +627,64 @@ export function lintPlan(plan, opts = {}) {
   let coverIdx = 0;
   timing.forEach((tm, i) => { if (tm.start < timing[coverIdx].start) coverIdx = i; });
   out.scenes = out.scenes.map((sc, i) => lintScene(sc, { ...o, index: i, timing: timing[i], cover: i === coverIdx }, notes));
+  // plan.stage: kalıcı düzenek öğeleri (mutlak zaman, sahnelerin kamerasıyla çizilir)
+  if (out.stage !== undefined) {
+    if (!Array.isArray(out.stage)) { delete out.stage; notes.push('plan.stage dizi değil, silindi'); }
+    else {
+      out.stage = out.stage.filter((e) => e && typeof e === 'object' && (KNOWN_TYPES.includes(e.type) || (o.types || []).includes(e.type)));
+      // altyazı bandına inen sahne öğesi uyarısı (her kamera anahtarında dünya y → ekran y)
+      const limit = num(o.stageMaxY, 1290);
+      out.stage.forEach((el) => {
+        if (el.fixed || !Number.isFinite(Number(el.y)) || RIG_TYPES.has(el.type)) return;
+        out.scenes.forEach((sc, i) => {
+          const c = sc.camera;
+          if (!c || !c.from) return;
+          [c.from, c.to || c.from].forEach((k) => {
+            const sy = o.H / 2 + (Number(el.y) - num(k.cy, o.H / 2)) * num(k.zoom, 1);
+            if (sy > limit) notes.push(`stage ${el.type}: sahne ${i + 1} kamerasında ekran y≈${Math.round(sy)} > ${limit} (altyazı bandı)`);
+          });
+        });
+      });
+      // düzenek: ekran şeridinin alt kenarı (grafik dahil) altyazıya inmesin
+      const det = out.stage.find((e) => e.type === 'detector');
+      if (det) {
+        const sY = num(det.geom?.screenY, 1040), dh = num(det.h, 84);
+        const gTop = sY - dh / 2 - 50; // okumalar dahil
+        const gy = sY + dh / 2 + (det.graph === false ? 0 : num(det.graph?.gap, 16) + num(det.graph?.h, 130));
+        const capY = num(o.captionY, o.H * 0.72);
+        out.scenes.forEach((sc, i) => {
+          const c = sc.camera;
+          if (!c || !c.from) return;
+          [c.from, c.to || c.from].forEach((k) => {
+            const sy = o.H / 2 + (gy - num(k.cy, o.H / 2)) * num(k.zoom, 1);
+            const st = o.H / 2 + (gTop - num(k.cy, o.H / 2)) * num(k.zoom, 1);
+            // şerit+grafik altyazı bandıyla kesişiyorsa uyar (tamamen ekran dışındaysa değil)
+            if (sy > limit && st < capY + 128) notes.push(`detector (şerit+grafik ${Math.round(st)}–${Math.round(sy)}): sahne ${i + 1} kamerasında altyazı bandına iniyor (> ${limit})`);
+          });
+        });
+      }
+    }
+  }
   return { plan: out, notes };
 }
 
 // Tek sahneyi düzeltir (sahne yeniden tasarlanınca da kullanılabilir).
 export function lintScene(scene, opts = {}, notes = []) {
+  // fixed:true öğeler kameradan bağımsız (ekran koordinatı): kamerası olan sahnede
+  // ayrı, kamerasız bir geçişte düzeltilir; sıra korunur.
+  const raw = Array.isArray(scene?.elements) ? scene.elements : null;
+  if (raw && scene.camera && raw.some((e) => e && e.fixed)) {
+    const fixedIdx = raw.map((e, i) => (e && e.fixed ? i : -1)).filter((i) => i >= 0);
+    const worldEls = raw.filter((e) => !(e && e.fixed));
+    const world = lintSceneCore({ ...scene, elements: worldEls }, worldEls.length ? opts : { ...opts, cover: false }, notes);
+    const scr = lintSceneCore({ ...scene, camera: undefined, elements: fixedIdx.map((i) => raw[i]) }, { ...opts, cover: false }, notes);
+    world.elements = [...world.elements, ...scr.elements.map((e) => ({ ...e, fixed: true }))];
+    return world;
+  }
+  return lintSceneCore(scene, opts, notes);
+}
+
+function lintSceneCore(scene, opts = {}, notes = []) {
   const o = { W: 1080, H: 1920, ...opts };
   const W = o.W, H = o.H;
   const idx = o.index ?? 0;
@@ -648,10 +719,17 @@ export function lintScene(scene, opts = {}, notes = []) {
   // dünya koordinatına çevir: güvenli alan tüm kamera durumlarının kesişimi, bant birleşimi.
   {
     const cam = sc.camera || {};
-    const zs = Array.isArray(cam.zoom) ? cam.zoom.map((v) => num(v, 1)) : [1, 1.05];
-    const px = num(cam.panX, 0), py = num(cam.panY, 0);
     const states = [];
-    zs.forEach((z) => [0, 1].forEach((k) => states.push({ z: Math.max(0.5, z), dx: px * k, dy: py * k })));
+    if (cam.from && typeof cam.from === 'object') {
+      // anahtar kareli kamera: dünya noktası (cx,cy) ekran merkezine gelir
+      [cam.from, cam.to && typeof cam.to === 'object' ? cam.to : cam.from].forEach((c) => {
+        states.push({ z: Math.max(0.5, num(c.zoom, 1)), dx: W / 2 - num(c.cx, W / 2), dy: H / 2 - num(c.cy, H / 2) });
+      });
+    } else {
+      const zs = Array.isArray(cam.zoom) ? cam.zoom.map((v) => num(v, 1)) : [1, 1.05];
+      const px = num(cam.panX, 0), py = num(cam.panY, 0);
+      zs.forEach((z) => [0, 1].forEach((k) => states.push({ z: Math.max(0.5, z), dx: px * k, dy: py * k })));
+    }
     const toWX = (x, st) => W / 2 + (x - W / 2) / st.z - st.dx;
     const toWY = (y, st) => H / 2 + (y - H / 2) / st.z - st.dy;
     S = {

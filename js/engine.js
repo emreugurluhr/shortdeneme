@@ -4,6 +4,8 @@
 // js/elements/ altındaki modüllerden gelir.
 import { DRAWERS as HUD_DRAWERS } from './elements/hud.js';
 import { DRAWERS as SCENERY_DRAWERS, BACKGROUNDS } from './elements/scenery.js';
+import { DRAWERS as PHYSICS_DRAWERS } from './elements/physics.js';
+import { kv } from './elements/keys.js';
 
 export const W = 1080;
 export const H = 1920;
@@ -726,6 +728,7 @@ function featheredArt(img, dw, dh) {
 const DRAWERS = {
   ...HUD_DRAWERS,
   ...SCENERY_DRAWERS,
+  ...PHYSICS_DRAWERS,
   text: drawText,
   counter: drawCounter,
   gear: drawGear,
@@ -751,7 +754,8 @@ function drawElement(ctx, el, sc, t, env) {
   const inAnim = sc.start === 0 && start === 0 && el.in !== 'type' ? 'none' : el.in || 'fade';
   const inDur = num(el.inDur, inAnim === 'stamp' ? 0.28 : inAnim === 'type' ? Math.max(0.4, String(el.text || '').length * 0.045) : inAnim === 'draw' ? 0.9 : 0.45);
   const inRaw = inAnim === 'none' ? 1 : clamp(lt / inDur);
-  let alpha = num(el.opacity, 1);
+  // opacity / x / y / scale düz değer ya da [[t, v], ...] anahtar dizisi olabilir (mutlak sn)
+  let alpha = num(kv(el.opacity, t), 1);
   let sx = 1, sy = 1, dx = 0, dy = 0, rot = (num(el.rotation, 0) * Math.PI) / 180;
   const e = easeOutCubic(inRaw);
   switch (inAnim) {
@@ -801,17 +805,20 @@ function drawElement(ctx, el, sc, t, env) {
   if (alpha <= 0.001) return;
   ctx.save();
   ctx.globalAlpha *= clamp(alpha);
-  ctx.translate(num(el.x, W / 2) + dx, num(el.y, H / 2) + dy);
+  const ox = num(kv(el.x, t), W / 2), oy = num(kv(el.y, t), H / 2);
+  ctx.translate(ox + dx, oy + dy);
   if (rot) ctx.rotate(rot);
-  const scale = num(el.scale, 1);
+  const scale = num(kv(el.scale, t), 1);
   ctx.scale(sx * scale, sy * scale);
-  draw(ctx, el, env, { lt, inRaw, until });
+  // t: videonun mutlak saniyesi, st: sahne içi saniye, ox/oy: öğe merkezi (dünya)
+  draw(ctx, el, env, { lt, inRaw, until, t, st: t - sc.start, ox, oy });
   ctx.restore();
 }
 
-function sceneShake(sc, t) {
+function sceneShake(sc, t, stage) {
   let dx = 0, dy = 0;
-  (sc.scene.elements || []).forEach((el) => {
+  const list = [...(sc.scene.elements || []).map((el) => [el, sc]), ...(stage ? stage.scene.elements.map((el) => [el, stage]) : [])];
+  list.forEach(([el, sc]) => {
     if (el.type !== 'shake') return;
     const lt = t - sc.start - elementStart(el, sc);
     const dur = num(el.duration, 0.4);
@@ -823,8 +830,9 @@ function sceneShake(sc, t) {
   return [dx, dy];
 }
 
-function sceneFlash(ctx, sc, t) {
-  (sc.scene.elements || []).forEach((el) => {
+function sceneFlash(ctx, sc, t, stage) {
+  const list = [...(sc.scene.elements || []).map((el) => [el, sc]), ...(stage ? stage.scene.elements.map((el) => [el, stage]) : [])];
+  list.forEach(([el, sc]) => {
     if (el.type !== 'flash') return;
     const lt = t - sc.start - elementStart(el, sc);
     const dur = num(el.duration, 0.35);
@@ -837,20 +845,52 @@ function sceneFlash(ctx, sc, t) {
   });
 }
 
-function drawScene(ctx, sc, t, env) {
+// Sahne kamerası: {cx, cy, zoom} (dünya noktası (cx,cy) ekran merkezine gelir).
+// Yeni biçim: camera {from:{cx,cy,zoom}, to:{...}, at=0, dur=sahne süresi, ease:'inOut'|'out'|'linear'}
+// Eski biçim: camera {zoom:[a,b], panX, panY} (sahne boyunca doğrusal).
+export function cameraAt(sc, t) {
   const local = t - sc.start;
   const len = Math.max(0.1, sc.end - sc.start);
   const cam = sc.scene.camera || {};
+  if (cam.from && typeof cam.from === 'object') {
+    const a = cam.from, b = cam.to && typeof cam.to === 'object' ? cam.to : cam.from;
+    const at = num(cam.at, 0);
+    const dur = num(cam.dur, len - at);
+    const u = clamp((local - at) / Math.max(0.001, dur));
+    const e = cam.ease === 'linear' ? u : cam.ease === 'out' ? easeOutCubic(u) : easeInOut(u);
+    return {
+      cx: lerp(num(a.cx, W / 2), num(b.cx, num(a.cx, W / 2)), e),
+      cy: lerp(num(a.cy, H / 2), num(b.cy, num(a.cy, H / 2)), e),
+      zoom: lerp(num(a.zoom, 1), num(b.zoom, num(a.zoom, 1)), e),
+    };
+  }
   const zoom = Array.isArray(cam.zoom) ? cam.zoom : [1, 1.05];
-  const z = lerp(num(zoom[0], 1), num(zoom[1], 1.05), clamp(local / len));
-  const [shx, shy] = sceneShake(sc, t);
+  const k = clamp(local / len);
+  return { zoom: lerp(num(zoom[0], 1), num(zoom[1], 1.05), k), cx: W / 2 - num(cam.panX, 0) * k, cy: H / 2 - num(cam.panY, 0) * k };
+}
+
+// stage: plan.stage öğeleri (tüm videoda kalıcı düzenek), sahne öğelerinden önce, aynı
+// kamerayla çizilir. el.fixed:true olan öğeler kameradan bağımsız (ekran koordinatı).
+function drawScene(ctx, sc, t, env, stage) {
+  const cam = cameraAt(sc, t);
+  const [shx, shy] = sceneShake(sc, t, stage);
+  const els = sc.scene.elements || [];
+  const sEls = stage ? stage.scene.elements : [];
   ctx.save();
   ctx.translate(W / 2 + shx, H / 2 + shy);
-  ctx.scale(z, z);
-  ctx.translate(-W / 2 + num(cam.panX, 0) * clamp(local / len), -H / 2 + num(cam.panY, 0) * clamp(local / len));
-  (sc.scene.elements || []).forEach((el) => drawElement(ctx, el, sc, t, env));
+  ctx.scale(cam.zoom, cam.zoom);
+  ctx.translate(-cam.cx, -cam.cy);
+  sEls.forEach((el) => { if (!el.fixed) drawElement(ctx, el, stage, t, env); });
+  els.forEach((el) => { if (!el.fixed) drawElement(ctx, el, sc, t, env); });
   ctx.restore();
-  sceneFlash(ctx, sc, t);
+  if (sEls.some((el) => el.fixed) || els.some((el) => el.fixed)) {
+    ctx.save();
+    ctx.translate(shx, shy);
+    sEls.forEach((el) => { if (el.fixed) drawElement(ctx, el, stage, t, env); });
+    els.forEach((el) => { if (el.fixed) drawElement(ctx, el, sc, t, env); });
+    ctx.restore();
+  }
+  sceneFlash(ctx, sc, t, stage);
 }
 
 // ---------------------------------------------------------------- altyazı
@@ -927,7 +967,7 @@ export function renderFrame(ctx, t, env) {
   const tr = 0.3;
   const local = cur ? t - cur.start : 0;
   const prev = cur && idx > 0 ? scenes[idx - 1] : null;
-  const inTransition = !!(prev && local < tr);
+  const inTransition = !!(prev && local < tr && cur.scene.transition !== 'none');
   const k = inTransition ? easeOutCubic(local / tr) : 1;
   // arka plan: sahneler arasında farklıysa yumuşak geçiş
   const bgCur = bgOf(cur);
@@ -937,12 +977,13 @@ export function renderFrame(ctx, t, env) {
   } else {
     drawBackground(ctx, t, theme, bgCur);
   }
+  if (!cur && env.stageScene) drawScene(ctx, { scene: {}, start: 0, end: env.duration || 1 }, t, { ...env, theme }, env.stageScene);
   if (cur) {
     if (inTransition) {
       // önceki sahne son karesinde donar, yenisi üstüne gelir
       ctx.save();
       ctx.globalAlpha = 1 - k;
-      drawScene(ctx, prev, Math.min(t, prev.end - 0.001), { ...env, theme });
+      drawScene(ctx, prev, Math.min(t, prev.end - 0.001), { ...env, theme }, null);
       ctx.restore();
       ctx.save();
       ctx.globalAlpha = k;
@@ -955,7 +996,7 @@ export function renderFrame(ctx, t, env) {
       } else if (type === 'slide') {
         ctx.translate((1 - k) * W * 0.25, 0);
       }
-      drawScene(ctx, cur, t, { ...env, theme });
+      drawScene(ctx, cur, t, { ...env, theme }, env.stageScene);
       ctx.restore();
       if (type === 'flash') {
         ctx.save();
@@ -965,7 +1006,7 @@ export function renderFrame(ctx, t, env) {
         ctx.restore();
       }
     } else {
-      drawScene(ctx, cur, t, { ...env, theme });
+      drawScene(ctx, cur, t, { ...env, theme }, env.stageScene);
     }
   }
   drawCaptions(ctx, t, { ...env, theme });
@@ -978,8 +1019,15 @@ export function buildEnv(project, images) {
   const timeline = resolveTimeline(project);
   const words = (project.words || []).filter((w) => w.display);
   const groups = captionGroups(words, project.settings?.captionChars || 16, project.settings?.captionWords || 3);
+  // kalıcı düzenek: zamanı mutlak (başlangıcı 0 olan sözde sahne, tüm kelimeler)
+  const stage = Array.isArray(project.plan?.stage) ? project.plan.stage.filter((e) => e && typeof e === 'object') : [];
+  const stageScene = stage.length
+    ? { scene: { elements: stage }, start: 0, end: timeline.duration, index: -1, words: project.words || [] }
+    : null;
   return {
     theme,
+    stage,
+    stageScene,
     background: backgroundName(project.plan?.background) || 'grid',
     images: images || {},
     timeline,
