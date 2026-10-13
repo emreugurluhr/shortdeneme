@@ -116,6 +116,20 @@ export function providerConfig(settings) {
   };
 }
 
+function newId() {
+  if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 3) | 8).toString(16);
+  });
+}
+
+// Servise özel başlıklar. OpenCode Go (Eylül 2026'dan beri) her konuşma için bir
+// x-opencode-session kimliği ister; her çağrı ayrı bir konuşma olduğu için her seferinde yenisi üretilir.
+function extraHeaders(cfg) {
+  return /(^|\.)opencode\.ai$/.test(new URL(cfg.base).hostname) ? { 'x-opencode-session': newId() } : {};
+}
+
 // OpenAI uyumlu Chat Completions (ChatGPT, OpenCode Go, diğerleri), akış ile.
 async function callOpenAICompatible({ cfg, prompt, maxTokens = 32000, signal, onText }) {
   if (!cfg.base) throw new Error(`${cfg.label}: Ayarlar’a API adresini (base URL) girin.`);
@@ -129,7 +143,7 @@ async function callOpenAICompatible({ cfg, prompt, maxTokens = 32000, signal, on
     apiFetch(`${cfg.base}/chat/completions`, {
       method: 'POST',
       signal,
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${cfg.key}` },
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${cfg.key}`, ...extraHeaders(cfg) },
       body: JSON.stringify(b),
     });
   let res = await send(body);
@@ -190,7 +204,7 @@ export async function listModels(settings) {
   } else {
     if (!cfg.base) throw new Error('Önce API adresini girin.');
     url = `${cfg.base}/models`;
-    headers = { authorization: `Bearer ${cfg.key}` };
+    headers = { authorization: `Bearer ${cfg.key}`, ...extraHeaders(cfg) };
   }
   const res = await apiFetch(url, { headers });
   if (!res.ok) throw new Error(`Model listesi alınamadı (${res.status}).`);
