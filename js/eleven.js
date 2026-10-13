@@ -1,5 +1,7 @@
 // ElevenLabs: seslendirme (kelime zamanlarıyla) ve efekt sesleri.
 
+import { apiFetch } from './net.js';
+
 const API = 'https://api.elevenlabs.io/v1';
 
 async function errorText(res) {
@@ -37,7 +39,7 @@ export async function textToSpeech({ apiKey, voiceId, modelId, text, stability, 
   const url = `${API}/text-to-speech/${encodeURIComponent(voiceId)}`;
 
   const attempt = async (body, timestamps) => {
-    const res = await fetch(`${url}${timestamps ? '/with-timestamps' : ''}?output_format=mp3_44100_128`, {
+    const res = await apiFetch(`${url}${timestamps ? '/with-timestamps' : ''}?output_format=mp3_44100_128`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
@@ -68,7 +70,7 @@ export async function soundEffect({ apiKey, prompt, duration, loop, signal }) {
   if (Number.isFinite(duration)) body.duration_seconds = Math.min(22, Math.max(0.5, duration));
   if (loop) body.loop = true;
   const go = (b) =>
-    fetch(`${API}/sound-generation?output_format=mp3_44100_128`, {
+    apiFetch(`${API}/sound-generation?output_format=mp3_44100_128`, {
       method: 'POST',
       headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json' },
       body: JSON.stringify(b),
@@ -84,7 +86,7 @@ export async function soundEffect({ apiKey, prompt, duration, loop, signal }) {
 }
 
 export async function voiceName({ apiKey, voiceId }) {
-  const res = await fetch(`${API}/voices/${encodeURIComponent(voiceId)}`, { headers: { 'xi-api-key': apiKey } });
+  const res = await apiFetch(`${API}/voices/${encodeURIComponent(voiceId)}`, { headers: { 'xi-api-key': apiKey } });
   if (!res.ok) throw new Error(await errorText(res));
   const j = await res.json();
   return j.name;

@@ -2,6 +2,8 @@
 // Sağlayıcılar: Claude, ChatGPT, OpenCode Go, Gemini ve OpenAI uyumlu diğerleri.
 // Hepsi doğrudan tarayıcıdan çağrılır; anahtarlar sadece bu tarayıcıda durur.
 
+import { apiFetch } from './net.js';
+
 // ---------------------------------------------------------------- sağlayıcılar
 async function callClaude({ apiKey, model, prompt, maxTokens = 32000, effort = 'medium', signal, onText }) {
   const body = {
@@ -13,7 +15,7 @@ async function callClaude({ apiKey, model, prompt, maxTokens = 32000, effort = '
     messages: [{ role: 'user', content: prompt }],
   };
   const send = (b, beta) =>
-    fetch('https://api.anthropic.com/v1/messages', {
+    apiFetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       signal,
       headers: {
@@ -69,7 +71,7 @@ async function callClaude({ apiKey, model, prompt, maxTokens = 32000, effort = '
 }
 
 async function callGemini({ apiKey, model, prompt, maxTokens = 32000, signal }) {
-  const res = await fetch(
+  const res = await apiFetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
     {
       method: 'POST',
@@ -93,8 +95,10 @@ async function callGemini({ apiKey, model, prompt, maxTokens = 32000, signal }) 
 // Sağlayıcı listesi. Yeni bir OpenAI uyumlu servis eklemek için buraya bir satır yeterli.
 export const PROVIDERS = {
   claude: { label: 'Claude (Anthropic)', kind: 'anthropic', model: 'claude-opus-5-5', keyHint: 'sk-ant-…', keyUrl: 'https://console.anthropic.com/settings/keys' },
-  openai: { label: 'ChatGPT (OpenAI)', kind: 'openai', base: 'https://api.openai.com/v1', model: 'gpt-5', tokenParam: 'max_completion_tokens', keyHint: 'sk-…', keyUrl: 'https://platform.openai.com/api-keys' },
-  opencode: { label: 'OpenCode Go', kind: 'openai', base: 'https://opencode.ai/zen/go/v1', model: 'deepseek-v4.1-flash', keyHint: 'OpenCode API anahtarı', keyUrl: 'https://opencode.ai/auth' },
+  openai: { label: 'ChatGPT (OpenAI)', kind: 'openai', base: 'https://api.openai.com/v1', model: 'gpt-5', tokenParam: 'max_completion_tokens', keyHint: 'sk-…', keyUrl: 'https://platform.openai.com/api-keys', models: ['gpt-5', 'gpt-5-mini'] },
+  opencode: { label: 'OpenCode Go', kind: 'openai', base: 'https://opencode.ai/zen/go/v1', model: 'deepseek-v4.1-flash', keyHint: 'OpenCode API anahtarı', keyUrl: 'https://opencode.ai/auth',
+    // liste alınamazsa gösterilecek bilinen modeller
+    models: ['deepseek-v4.1-flash', 'deepseek-flash', 'deepseek-v4-flash', 'deepseek-v4-pro', 'glm-5.2', 'glm-5.1', 'kimi-k2.7-code', 'kimi-k2.6', 'qwen3.7-max', 'qwen3.7-plus', 'minimax-m2.7', 'mimo-v2.5-pro'] },
   gemini: { label: 'Gemini (Google)', kind: 'gemini', model: 'gemini-2.5-pro', keyHint: 'AIza…', keyUrl: 'https://aistudio.google.com/apikey' },
   custom: { label: 'Diğer (OpenAI uyumlu)', kind: 'openai', base: '', model: '', keyHint: 'API anahtarı', keyUrl: '' },
 };
@@ -122,7 +126,7 @@ async function callOpenAICompatible({ cfg, prompt, maxTokens = 32000, signal, on
     [cfg.tokenParam || 'max_tokens']: maxTokens,
   };
   const send = (b) =>
-    fetch(`${cfg.base}/chat/completions`, {
+    apiFetch(`${cfg.base}/chat/completions`, {
       method: 'POST',
       signal,
       headers: { 'content-type': 'application/json', authorization: `Bearer ${cfg.key}` },
@@ -188,7 +192,7 @@ export async function listModels(settings) {
     url = `${cfg.base}/models`;
     headers = { authorization: `Bearer ${cfg.key}` };
   }
-  const res = await fetch(url, { headers });
+  const res = await apiFetch(url, { headers });
   if (!res.ok) throw new Error(`Model listesi alınamadı (${res.status}).`);
   const j = await res.json();
   const items = j.data || j.models || [];

@@ -5,6 +5,7 @@ import { textToSpeech, soundEffect, voiceName } from './eleven.js';
 import { ask, askJSON, scriptPrompt, planPrompt, scenePrompt, artPrompt, extractSVG, PROVIDERS, providerConfig, listModels } from './llm.js';
 import { audioCtx, decodeAudio, mixAudio, loadFonts, loadImages, svgToImage, exportVideo } from './media.js';
 import { loadSettings, saveSettings, saveProject, loadProject } from './store.js';
+import { setProxy } from './net.js';
 import { demoProject } from './demo.js';
 
 const $ = (id) => document.getElementById(id);
@@ -617,7 +618,7 @@ async function doAll() {
 }
 
 // ---------------------------------------------------------------- ayarlar
-const settingFields = ['elevenKey', 'voiceId', 'modelId', 'stability', 'maxSfx', 'captionWords'];
+const settingFields = ['elevenKey', 'voiceId', 'modelId', 'stability', 'maxSfx', 'captionWords', 'proxyUrl'];
 // Pencere açıkken düzenlenen kopya: sağlayıcı değiştirince alanlar burada saklanır.
 let draft = null;
 let shownProvider = null;
@@ -646,7 +647,7 @@ function showProvider(id) {
   $('aiModel').value = cfg.model;
   $('aiBase').value = cfg.base;
   $('aiBaseRow').hidden = cfg.kind !== 'openai';
-  $('aiModels').textContent = '';
+  fillModelSelect(PROVIDERS[id].models || []);
   const notes = {
     claude: 'Görsel çiziminde en iyi sonucu verir.',
     openai: 'ChatGPT aboneliği değil, platform.openai.com üzerinden ayrı bir API anahtarı gerekir.',
@@ -682,25 +683,50 @@ $('provider').addEventListener('change', () => {
   showProvider($('provider').value);
 });
 
+// Model listesi: açılır menüden seçince model kutusuna yazılır (iPhone'da da çalışır).
+function fillModelSelect(models) {
+  const sel = $('aiModelSelect');
+  sel.textContent = '';
+  if (!models.length) {
+    sel.hidden = true;
+    return;
+  }
+  const first = document.createElement('option');
+  first.value = '';
+  first.textContent = `Listeden seç (${models.length} model)`;
+  sel.append(first);
+  models.forEach((m) => {
+    const o = document.createElement('option');
+    o.value = m;
+    o.textContent = m;
+    sel.append(o);
+  });
+  sel.value = models.includes($('aiModel').value) ? $('aiModel').value : '';
+  sel.hidden = false;
+}
+$('aiModelSelect').addEventListener('change', (e) => {
+  if (e.target.value) $('aiModel').value = e.target.value;
+});
+
 $('fetchModels').addEventListener('click', async () => {
   stashProvider();
   const btn = $('fetchModels');
   btn.disabled = true;
   btn.textContent = 'Getiriliyor…';
+  setProxy($('proxyUrl').value);
   try {
     const models = await listModels({ ...draft, provider: shownProvider });
-    $('aiModels').textContent = '';
-    models.forEach((m) => {
-      const o = document.createElement('option');
-      o.value = m;
-      $('aiModels').append(o);
-    });
-    $('aiNote').textContent = `${models.length} model bulundu. Model kutusuna tıklayıp listeden seçin.`;
+    if (!models.length) throw new Error('Servis boş bir model listesi döndürdü.');
+    fillModelSelect(models);
+    $('aiNote').textContent = `${models.length} model bulundu. Aşağıdaki listeden seçin.`;
   } catch (e) {
-    $('aiNote').textContent = e.message;
+    const known = PROVIDERS[shownProvider].models || [];
+    fillModelSelect(known);
+    $('aiNote').textContent = e.message + (known.length ? ' Aşağıda bilinen modellerin listesi var.' : '');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Modelleri getir';
+    setProxy(state.settings.proxyUrl);
   }
 });
 
@@ -716,6 +742,7 @@ $('settings').addEventListener('close', async () => {
   s.ambience = $('ambience').checked;
   s.captions = $('captions').checked;
   state.settings = s;
+  setProxy(s.proxyUrl);
   if (!saveSettings(s)) toast('Ayarlar bu tarayıcıda kaydedilemedi (gizli sekme olabilir).', true);
   else toast(`Ayarlar kaydedildi · ${PROVIDERS[s.provider].label}`);
   invalidateAudio();
@@ -762,6 +789,7 @@ document.addEventListener('keydown', (e) => {
 
 // ---------------------------------------------------------------- başlangıç
 (async function init() {
+  setProxy(state.settings.proxyUrl);
   await loadFonts();
   state.project = (await loadProject()) || demoProject();
   state.images = await loadImages(state.project.arts);
