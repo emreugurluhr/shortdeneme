@@ -94,7 +94,7 @@ async function callGemini({ apiKey, model, prompt, maxTokens = 32000, signal }) 
 export const PROVIDERS = {
   claude: { label: 'Claude (Anthropic)', kind: 'anthropic', model: 'claude-opus-5-5', keyHint: 'sk-ant-…', keyUrl: 'https://console.anthropic.com/settings/keys' },
   openai: { label: 'ChatGPT (OpenAI)', kind: 'openai', base: 'https://api.openai.com/v1', model: 'gpt-5', tokenParam: 'max_completion_tokens', keyHint: 'sk-…', keyUrl: 'https://platform.openai.com/api-keys' },
-  opencode: { label: 'OpenCode Go', kind: 'openai', base: 'https://opencode.ai/zen/go/v1', model: 'glm-5.1', keyHint: 'OpenCode API anahtarı', keyUrl: 'https://opencode.ai/auth' },
+  opencode: { label: 'OpenCode Go', kind: 'openai', base: 'https://opencode.ai/zen/go/v1', model: 'deepseek-v4.1-flash', keyHint: 'OpenCode API anahtarı', keyUrl: 'https://opencode.ai/auth' },
   gemini: { label: 'Gemini (Google)', kind: 'gemini', model: 'gemini-2.5-pro', keyHint: 'AIza…', keyUrl: 'https://aistudio.google.com/apikey' },
   custom: { label: 'Diğer (OpenAI uyumlu)', kind: 'openai', base: '', model: '', keyHint: 'API anahtarı', keyUrl: '' },
 };

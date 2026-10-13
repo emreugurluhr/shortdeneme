@@ -29,7 +29,7 @@ Yapay zekâ sağlayıcıları:
 |---|---|---|
 | Claude (Anthropic) | api.anthropic.com | `claude-opus-5-5` |
 | ChatGPT (OpenAI) | `https://api.openai.com/v1` | `gpt-5` |
-| OpenCode Go | `https://opencode.ai/zen/go/v1` | `glm-5.1` |
+| OpenCode Go | `https://opencode.ai/zen/go/v1` | `deepseek-v4.1-flash` |
 | Gemini (Google) | generativelanguage.googleapis.com | `gemini-2.5-pro` |
 | Diğer (OpenAI uyumlu) | kendiniz girersiniz | kendiniz girersiniz |
 
