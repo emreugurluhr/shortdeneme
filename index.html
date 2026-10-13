@@ -46,7 +46,7 @@
     </article>
 
     <article class="card" id="card3">
-      <div class="card-head"><span class="step-no">3</span><h2>Sahneler ve sesler</h2><span class="hint">Görselleri Claude çizer</span></div>
+      <div class="card-head"><span class="step-no">3</span><h2>Sahneler ve sesler</h2><span class="hint">Görselleri yapay zekâ çizer</span></div>
       <div class="row">
         <button class="btn" id="directBtn" type="button">Sahneleri tasarla ve çiz</button>
         <button class="btn" id="sfxBtn" type="button">Efekt seslerini üret</button>
@@ -101,24 +101,20 @@
     <fieldset>
       <legend>Senaryo ve çizim (yapay zekâ)</legend>
       <label for="provider">Sağlayıcı</label>
-      <select id="provider">
-        <option value="claude">Claude (Anthropic)</option>
-        <option value="gemini">Gemini (Google)</option>
-      </select>
-      <div id="claudeFields">
-        <label for="claudeKey">Claude API anahtarı</label>
-        <input type="password" id="claudeKey" autocomplete="off" placeholder="sk-ant-…">
-        <label for="claudeModel">Model</label>
-        <input type="text" id="claudeModel">
-        <p class="note">Anahtarı <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> adresinden alabilirsiniz.</p>
+      <select id="provider"></select>
+      <label for="aiKey">API anahtarı</label>
+      <input type="password" id="aiKey" autocomplete="off">
+      <div id="aiBaseRow">
+        <label for="aiBase">API adresi (base URL)</label>
+        <input type="text" id="aiBase" placeholder="https://…/v1" spellcheck="false">
       </div>
-      <div id="geminiFields" hidden>
-        <label for="geminiKey">Gemini API anahtarı</label>
-        <input type="password" id="geminiKey" autocomplete="off">
-        <label for="geminiModel">Model</label>
-        <input type="text" id="geminiModel">
-        <p class="note">Anahtarı <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a> adresinden alabilirsiniz.</p>
+      <label for="aiModel">Model</label>
+      <div class="row tight">
+        <input type="text" id="aiModel" list="aiModels" spellcheck="false">
+        <datalist id="aiModels"></datalist>
+        <button class="btn small" id="fetchModels" type="button">Modelleri getir</button>
       </div>
+      <p class="note" id="aiNote"></p>
     </fieldset>
     <fieldset>
       <legend>Video</legend>

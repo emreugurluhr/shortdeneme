@@ -1,5 +1,6 @@
 // Yapay zekâ çağrıları: senaryo yazma, sahne planı ve SVG çizimleri.
-// Sağlayıcı: Claude (Anthropic API) ya da Gemini. İkisi de doğrudan tarayıcıdan çağrılır.
+// Sağlayıcılar: Claude, ChatGPT, OpenCode Go, Gemini ve OpenAI uyumlu diğerleri.
+// Hepsi doğrudan tarayıcıdan çağrılır; anahtarlar sadece bu tarayıcıda durur.
 
 // ---------------------------------------------------------------- sağlayıcılar
 async function callClaude({ apiKey, model, prompt, maxTokens = 32000, effort = 'medium', signal, onText }) {
@@ -89,13 +90,120 @@ async function callGemini({ apiKey, model, prompt, maxTokens = 32000, signal }) 
   return (j.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('');
 }
 
-export async function ask(settings, prompt, opts = {}) {
-  if (settings.provider === 'gemini') {
-    if (!settings.geminiKey) throw new Error('Ayarlar’dan Gemini API anahtarını girin.');
-    return callGemini({ apiKey: settings.geminiKey, model: settings.geminiModel || 'gemini-2.5-pro', prompt, ...opts });
+// Sağlayıcı listesi. Yeni bir OpenAI uyumlu servis eklemek için buraya bir satır yeterli.
+export const PROVIDERS = {
+  claude: { label: 'Claude (Anthropic)', kind: 'anthropic', model: 'claude-opus-5-5', keyHint: 'sk-ant-…', keyUrl: 'https://console.anthropic.com/settings/keys' },
+  openai: { label: 'ChatGPT (OpenAI)', kind: 'openai', base: 'https://api.openai.com/v1', model: 'gpt-5', tokenParam: 'max_completion_tokens', keyHint: 'sk-…', keyUrl: 'https://platform.openai.com/api-keys' },
+  opencode: { label: 'OpenCode Go', kind: 'openai', base: 'https://opencode.ai/zen/go/v1', model: 'glm-5.1', keyHint: 'OpenCode API anahtarı', keyUrl: 'https://opencode.ai/auth' },
+  gemini: { label: 'Gemini (Google)', kind: 'gemini', model: 'gemini-2.5-pro', keyHint: 'AIza…', keyUrl: 'https://aistudio.google.com/apikey' },
+  custom: { label: 'Diğer (OpenAI uyumlu)', kind: 'openai', base: '', model: '', keyHint: 'API anahtarı', keyUrl: '' },
+};
+
+// Ayarlardan seçili sağlayıcının bilgilerini çıkarır.
+export function providerConfig(settings) {
+  const id = PROVIDERS[settings.provider] ? settings.provider : 'claude';
+  const def = PROVIDERS[id];
+  return {
+    id,
+    ...def,
+    key: settings[`${id}Key`] || '',
+    model: settings[`${id}Model`] || def.model,
+    base: (settings[`${id}Base`] || def.base || '').replace(/\/+$/, ''),
+  };
+}
+
+// OpenAI uyumlu Chat Completions (ChatGPT, OpenCode Go, diğerleri), akış ile.
+async function callOpenAICompatible({ cfg, prompt, maxTokens = 32000, signal, onText }) {
+  if (!cfg.base) throw new Error(`${cfg.label}: Ayarlar’a API adresini (base URL) girin.`);
+  const body = {
+    model: cfg.model,
+    stream: true,
+    messages: [{ role: 'user', content: prompt }],
+    [cfg.tokenParam || 'max_tokens']: maxTokens,
+  };
+  const send = (b) =>
+    fetch(`${cfg.base}/chat/completions`, {
+      method: 'POST',
+      signal,
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${cfg.key}` },
+      body: JSON.stringify(b),
+    });
+  let res = await send(body);
+  if (res.status === 400) {
+    // Bazı modeller çıktı sınırı parametresini ya da bu kadar büyük değeri kabul etmez.
+    const { max_tokens, max_completion_tokens, ...plain } = body;
+    res = await send(plain);
   }
-  if (!settings.claudeKey) throw new Error('Ayarlar’dan Claude API anahtarını girin.');
-  return callClaude({ apiKey: settings.claudeKey, model: settings.claudeModel || 'claude-opus-5-5', prompt, ...opts });
+  if (!res.ok) {
+    let msg = '';
+    try { const j = await res.json(); msg = j.error?.message || j.message || JSON.stringify(j); } catch (_) { /* boş */ }
+    const hint = { 401: 'API anahtarı geçersiz.', 403: 'Anahtarın bu modele erişimi yok.', 404: 'Model adı ya da API adresi bulunamadı.', 429: 'Çok fazla istek ya da kullanım limiti doldu.' }[res.status] || '';
+    throw new Error(`${cfg.label} (${res.status}): ${hint} ${msg}`.trim());
+  }
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '', text = '', finish = null;
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i;
+    while ((i = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, i).trim();
+      buf = buf.slice(i + 1);
+      if (!line.startsWith('data:')) continue;
+      const data = line.slice(5).trim();
+      if (data === '[DONE]') continue;
+      let ev;
+      try { ev = JSON.parse(data); } catch (_) { continue; }
+      if (ev.error) throw new Error(`${cfg.label}: ${ev.error.message || 'akış hatası'}`);
+      const ch = ev.choices?.[0];
+      const piece = ch?.delta?.content;
+      if (typeof piece === 'string' && piece) {
+        text += piece;
+        onText?.(text);
+      }
+      if (ch?.finish_reason) finish = ch.finish_reason;
+    }
+  }
+  if (finish === 'length') throw new Error(`${cfg.label}: yanıt çok uzun olduğu için yarıda kesildi. Tekrar deneyin ya da daha büyük çıktı sınırı olan bir model seçin.`);
+  if (finish === 'content_filter') throw new Error(`${cfg.label} bu isteği yanıtlamadı. Konuyu farklı ifade etmeyi deneyin.`);
+  if (!text.trim()) throw new Error(`${cfg.label} boş yanıt döndürdü. Başka bir model deneyin.`);
+  return text;
+}
+
+// Sağlayıcının model listesini getirir (Ayarlar’daki "Modelleri getir").
+export async function listModels(settings) {
+  const cfg = providerConfig(settings);
+  if (!cfg.key) throw new Error('Önce API anahtarını girin.');
+  let url, headers = {};
+  if (cfg.kind === 'anthropic') {
+    url = 'https://api.anthropic.com/v1/models?limit=100';
+    headers = { 'x-api-key': cfg.key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' };
+  } else if (cfg.kind === 'gemini') {
+    url = 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=200';
+    headers = { 'x-goog-api-key': cfg.key };
+  } else {
+    if (!cfg.base) throw new Error('Önce API adresini girin.');
+    url = `${cfg.base}/models`;
+    headers = { authorization: `Bearer ${cfg.key}` };
+  }
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error(`Model listesi alınamadı (${res.status}).`);
+  const j = await res.json();
+  const items = j.data || j.models || [];
+  return items
+    .map((m) => String(m.id || m.name || '').replace(/^models\//, ''))
+    .filter(Boolean)
+    .sort();
+}
+
+export async function ask(settings, prompt, opts = {}) {
+  const cfg = providerConfig(settings);
+  if (!cfg.key) throw new Error(`Ayarlar’dan ${cfg.label} API anahtarını girin.`);
+  if (cfg.kind === 'gemini') return callGemini({ apiKey: cfg.key, model: cfg.model, prompt, ...opts });
+  if (cfg.kind === 'openai') return callOpenAICompatible({ cfg, prompt, ...opts });
+  return callClaude({ apiKey: cfg.key, model: cfg.model, prompt, ...opts });
 }
 
 // Yanıttan JSON çıkar: düz JSON, kod bloğu ya da ilk { … son }.

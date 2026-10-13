@@ -2,7 +2,7 @@
 import { W, H, renderFrame, buildEnv, elementStart } from './engine.js';
 import { cleanForTTS, stripTags, wordsFromAlignment, estimateWords, segmentsFromWords } from './script.js';
 import { textToSpeech, soundEffect, voiceName } from './eleven.js';
-import { ask, askJSON, scriptPrompt, planPrompt, scenePrompt, artPrompt, extractSVG } from './llm.js';
+import { ask, askJSON, scriptPrompt, planPrompt, scenePrompt, artPrompt, extractSVG, PROVIDERS, providerConfig, listModels } from './llm.js';
 import { audioCtx, decodeAudio, mixAudio, loadFonts, loadImages, svgToImage, exportVideo } from './media.js';
 import { loadSettings, saveSettings, saveProject, loadProject } from './store.js';
 import { demoProject } from './demo.js';
@@ -85,10 +85,10 @@ function requireEleven() {
 }
 
 function requireAI() {
-  const s = state.settings;
-  if ((s.provider === 'gemini' && !s.geminiKey) || (s.provider !== 'gemini' && !s.claudeKey)) {
+  const cfg = providerConfig(state.settings);
+  if (!cfg.key || (cfg.kind === 'openai' && !cfg.base)) {
     openSettings();
-    throw new Error('Senaryo ve çizim için Ayarlar’a Claude (ya da Gemini) API anahtarınızı girin.');
+    throw new Error(`Senaryo ve çizim için Ayarlar’a ${cfg.label} API anahtarınızı girin.`);
   }
 }
 
@@ -617,26 +617,99 @@ async function doAll() {
 }
 
 // ---------------------------------------------------------------- ayarlar
-const settingFields = ['elevenKey', 'voiceId', 'modelId', 'stability', 'provider', 'claudeKey', 'claudeModel', 'geminiKey', 'geminiModel', 'maxSfx', 'captionWords'];
+const settingFields = ['elevenKey', 'voiceId', 'modelId', 'stability', 'maxSfx', 'captionWords'];
+// Pencere açıkken düzenlenen kopya: sağlayıcı değiştirince alanlar burada saklanır.
+let draft = null;
+let shownProvider = null;
+
+$('provider').append(
+  ...Object.entries(PROVIDERS).map(([id, p]) => {
+    const o = document.createElement('option');
+    o.value = id;
+    o.textContent = p.label;
+    return o;
+  }),
+);
+
+function stashProvider() {
+  if (!shownProvider) return;
+  draft[`${shownProvider}Key`] = $('aiKey').value.trim();
+  draft[`${shownProvider}Model`] = $('aiModel').value.trim();
+  if (PROVIDERS[shownProvider].kind === 'openai') draft[`${shownProvider}Base`] = $('aiBase').value.trim();
+}
+
+function showProvider(id) {
+  shownProvider = id;
+  const cfg = providerConfig({ ...draft, provider: id });
+  $('aiKey').value = cfg.key;
+  $('aiKey').placeholder = cfg.keyHint || '';
+  $('aiModel').value = cfg.model;
+  $('aiBase').value = cfg.base;
+  $('aiBaseRow').hidden = cfg.kind !== 'openai';
+  $('aiModels').textContent = '';
+  const notes = {
+    claude: 'Görsel çiziminde en iyi sonucu verir.',
+    openai: 'ChatGPT aboneliği değil, platform.openai.com üzerinden ayrı bir API anahtarı gerekir.',
+    opencode: 'OpenCode Go aboneliğinizin API anahtarı. Görsel kalitesi modele göre değişir; "Modelleri getir" ile listeden seçebilirsiniz.',
+    gemini: 'Ücretsiz kotası olan bir seçenek.',
+    custom: 'OpenAI uyumlu herhangi bir servis: API adresini /v1 ile biten şekilde girin.',
+  };
+  $('aiNote').textContent = notes[id] || '';
+  if (cfg.keyUrl) {
+    const a = document.createElement('a');
+    a.href = cfg.keyUrl;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = ' Anahtar al →';
+    $('aiNote').append(a);
+  }
+}
+
 function openSettings() {
   const s = state.settings;
+  draft = { ...s };
   settingFields.forEach((k) => ($(k).value = s[k] ?? ''));
   $('ambience').checked = !!s.ambience;
   $('captions').checked = s.captions !== false;
-  $('voiceCheck').textContent = '';
-  toggleProvider();
+  $('provider').value = PROVIDERS[s.provider] ? s.provider : 'claude';
+  shownProvider = null;
+  showProvider($('provider').value);
   $('settings').showModal();
 }
-function toggleProvider() {
-  const g = $('provider').value === 'gemini';
-  $('geminiFields').hidden = !g;
-  $('claudeFields').hidden = g;
-}
-$('provider').addEventListener('change', toggleProvider);
+
+$('provider').addEventListener('change', () => {
+  stashProvider();
+  showProvider($('provider').value);
+});
+
+$('fetchModels').addEventListener('click', async () => {
+  stashProvider();
+  const btn = $('fetchModels');
+  btn.disabled = true;
+  btn.textContent = 'Getiriliyor…';
+  try {
+    const models = await listModels({ ...draft, provider: shownProvider });
+    $('aiModels').textContent = '';
+    models.forEach((m) => {
+      const o = document.createElement('option');
+      o.value = m;
+      $('aiModels').append(o);
+    });
+    $('aiNote').textContent = `${models.length} model bulundu. Model kutusuna tıklayıp listeden seçin.`;
+  } catch (e) {
+    $('aiNote').textContent = e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Modelleri getir';
+  }
+});
+
 $('settings').addEventListener('close', async () => {
   if ($('settings').returnValue !== 'save') return;
-  const s = { ...state.settings };
+  stashProvider();
+  const s = { ...draft };
   settingFields.forEach((k) => (s[k] = $(k).value.trim()));
+  s.provider = $('provider').value;
   s.stability = Number(s.stability);
   s.maxSfx = Math.max(0, Math.min(15, Number(s.maxSfx) || 0));
   s.captionWords = Math.max(1, Math.min(5, Number(s.captionWords) || 3));
@@ -644,7 +717,7 @@ $('settings').addEventListener('close', async () => {
   s.captions = $('captions').checked;
   state.settings = s;
   if (!saveSettings(s)) toast('Ayarlar bu tarayıcıda kaydedilemedi (gizli sekme olabilir).', true);
-  else toast('Ayarlar kaydedildi.');
+  else toast(`Ayarlar kaydedildi · ${PROVIDERS[s.provider].label}`);
   invalidateAudio();
   rebuildEnv();
   if (s.elevenKey && s.voiceId) {

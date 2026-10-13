@@ -7,11 +7,8 @@ export const DEFAULT_SETTINGS = {
   voiceId: 'DpEiQMnL9WxMsymCsjPY',
   modelId: 'eleven_v4',
   stability: 0.5,
+  // yapay zekâ: seçili sağlayıcı + her sağlayıcı için <id>Key / <id>Model / <id>Base
   provider: 'claude',
-  claudeKey: '',
-  claudeModel: 'claude-opus-5-5',
-  geminiKey: '',
-  geminiModel: 'gemini-2.5-pro',
   maxSfx: 6,
   ambience: true,
   captions: true,
