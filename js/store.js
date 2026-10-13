@@ -9,6 +9,10 @@ export const DEFAULT_SETTINGS = {
   stability: 0.5,
   // yapay zekâ: seçili sağlayıcı + her sağlayıcı için <id>Key / <id>Model / <id>Base
   provider: 'claude',
+  // çizim modeli: artProvider boşsa senaryo sağlayıcısı; artModel doluysa sadece çizimlerde bu model
+  artProvider: '',
+  artModel: '',
+  refineArt: false,
   maxSfx: 6,
   ambience: true,
   captions: true,

@@ -1,5 +1,9 @@
 // Sahne motoru: bir projeyi (sahneler + kelime zamanlamaları) verilen t anında
 // 1080x1920 tuvale çizer. Önizleme ve video dışa aktarımı aynı fonksiyonu kullanır.
+// Ek öğe türleri (HUD bileşenleri, uzay/şehir dekorları) ve arka plan hazırları
+// js/elements/ altındaki modüllerden gelir.
+import { DRAWERS as HUD_DRAWERS } from './elements/hud.js';
+import { DRAWERS as SCENERY_DRAWERS, BACKGROUNDS } from './elements/scenery.js';
 
 export const W = 1080;
 export const H = 1920;
@@ -43,6 +47,8 @@ function color(v, theme, d) {
   if (v === 'accent') return theme.accent;
   if (v === 'accent2') return theme.accent2;
   if (v === 'text') return theme.text;
+  if (v === 'bg') return theme.bg;
+  if (v === 'bg2') return theme.bg2;
   return v;
 }
 
@@ -109,35 +115,39 @@ export function elementStart(el, sc) {
 }
 
 // ---------------------------------------------------------------- arka plan
-function drawBackground(ctx, t, theme) {
-  const g = ctx.createRadialGradient(W / 2, H * 0.42, 50, W / 2, H * 0.5, H * 0.75);
-  g.addColorStop(0, theme.bg2);
-  g.addColorStop(1, theme.bg);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
+// Hazır arka planlar js/elements/scenery.js içindedir ("grid" eski lacivert ızgara).
+// plan.background tüm video için, scene.background tek sahne için seçilir.
+export const BACKGROUND_NAMES = Object.keys(BACKGROUNDS);
 
-  // hafifçe kayan ızgara
-  const step = 72;
-  const off = (t * 6) % step;
-  ctx.strokeStyle = theme.grid;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  for (let x = -step + off; x < W + step; x += step) {
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, H);
-  }
-  for (let y = -step + off; y < H + step; y += step) {
-    ctx.moveTo(0, y);
-    ctx.lineTo(W, y);
-  }
-  ctx.stroke();
+export function backgroundName(name) {
+  if (!name || typeof name !== 'string') return null;
+  if (BACKGROUNDS[name]) return name;
+  const k = name.trim().toLowerCase().replace(/[\s_]+/g, '-');
+  return BACKGROUNDS[k] ? k : null;
+}
 
-  // vinyet
-  const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.72);
-  v.addColorStop(0, 'rgba(0,0,0,0)');
-  v.addColorStop(1, 'rgba(0,0,0,0.55)');
-  ctx.fillStyle = v;
-  ctx.fillRect(0, 0, W, H);
+function drawBackground(ctx, t, theme, name) {
+  (BACKGROUNDS[name] || BACKGROUNDS.grid)(ctx, t, theme);
+}
+
+// Geçişte gelen sahnenin arka planı ayrı bir tuvale çizilip saydamlıkla bindirilir
+// (arka planlar globalAlpha'yı kendileri ayarladığı için doğrudan karıştırılamaz).
+let blendCanvas = null;
+function drawBackgroundOver(ctx, t, theme, name, alpha) {
+  if (alpha <= 0.001) return;
+  if (alpha >= 0.999) return drawBackground(ctx, t, theme, name);
+  if (!blendCanvas) {
+    blendCanvas = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(W, H) : Object.assign(document.createElement('canvas'), { width: W, height: H });
+  }
+  const b = blendCanvas.getContext('2d');
+  b.setTransform(1, 0, 0, 1, 0, 0);
+  b.globalAlpha = 1;
+  b.globalCompositeOperation = 'source-over';
+  drawBackground(b, t, theme, name);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(blendCanvas, 0, 0, W, H);
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------- metin
@@ -199,7 +209,19 @@ function drawText(ctx, el, env, p) {
   let text = String(el.text ?? '');
   if (el.upper) text = text.toLocaleUpperCase('tr-TR');
   const spans = parseSpans(text);
-  const lines = wrapSpans(ctx, spans, num(el.maxWidth, 940));
+  const maxW = num(el.maxWidth, 940);
+  let lines = wrapSpans(ctx, spans, maxW);
+  // dengeli satırlar: aynı satır sayısını koruyan en dar genişliği bul ("donar / mı?" gibi
+  // tek kelimelik yetim satır kalmasın)
+  if (lines.length >= 2 && el.balance !== false) {
+    let lo = maxW * 0.4, hi = maxW, best = lines;
+    for (let i = 0; i < 7; i++) {
+      const mid = (lo + hi) / 2;
+      const l2 = wrapSpans(ctx, spans, mid);
+      if (l2.length <= lines.length && Math.max(...l2.map((l) => l.w)) <= mid + 0.5) { best = l2; hi = mid; } else lo = mid;
+    }
+    lines = best;
+  }
   const lh = size * num(el.lineHeight, 1.12);
   const total = lines.length * lh;
   const fill = color(el.color, theme, theme.text);
@@ -279,7 +301,9 @@ function drawCounter(ctx, el, env, p) {
   let v = lerp(from, to, k);
   // büyük sayılarda sayarken anlamsız basamaklar görünmesin
   if (k < 1 && Math.abs(v) >= 1e5) v = Number(v.toPrecision(3));
-  const text = `${el.prefix || ''}${formatNumber(v, num(el.decimals, 0))}${el.suffix || ''}`;
+  // Türkçede yüzde işareti önde: "%40"
+  const pctFix = !el.prefix && String(el.suffix || '').trim() === '%';
+  const text = pctFix ? `%${formatNumber(v, num(el.decimals, 0))}` : `${el.prefix || ''}${formatNumber(v, num(el.decimals, 0))}${el.suffix || ''}`;
   drawText(ctx, { font: 'number', weight: 700, glow: true, ...el, text, in: 'none' }, env, p);
 }
 
@@ -376,50 +400,76 @@ function drawWaves(ctx, el, env, p) {
 
 // ---------------------------------------------------------------- ölçek / çubuk
 function drawMeter(ctx, el, env, p) {
+  // HUD görünümü: ince cam kapsül, degrade dolum, küçük harf aralıklı etiketler
   const theme = env.theme;
-  const w = num(el.w, 46), h = num(el.h, 760);
+  const w = Math.min(num(el.w, 30), 44), h = num(el.h, 760);
   const horizontal = el.horizontal === true;
   const dur = num(el.duration, 1.8);
-  const val = lerp(num(el.from, 0), num(el.value, 1), easeInOut(clamp(p.lt / dur)));
+  const val = clamp(lerp(num(el.from, 0), num(el.value, 1), easeInOut(clamp(p.lt / dur))));
   const c = color(el.color, theme, theme.accent);
   const bw = horizontal ? h : w, bh = horizontal ? w : h;
-  roundRect(ctx, -bw / 2 - 8, -bh / 2 - 8, bw + 16, bh + 16, (Math.min(bw, bh) + 16) / 2);
-  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-  ctx.lineWidth = 4;
+  const pad = Math.max(4, w * 0.18);
+  // kapsül
+  roundRect(ctx, -bw / 2, -bh / 2, bw, bh, Math.min(bw, bh) / 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.lineWidth = 2;
   ctx.stroke();
+  // dolum
+  const iw = bw - pad * 2, ih = bh - pad * 2;
+  const thick = Math.min(iw, ih);
   ctx.save();
   ctx.shadowColor = c;
-  ctx.shadowBlur = 25;
-  ctx.fillStyle = c;
-  if (horizontal) roundRect(ctx, -bw / 2, -bh / 2, Math.max(bh, bw * clamp(val)), bh, bh / 2);
-  else roundRect(ctx, -bw / 2, bh / 2 - Math.max(bw, bh * clamp(val)), bw, Math.max(bw, bh * clamp(val)), bw / 2);
+  ctx.shadowBlur = 16;
+  let g;
+  if (horizontal) {
+    const fw = Math.max(thick, iw * val);
+    g = ctx.createLinearGradient(-iw / 2, 0, iw / 2, 0);
+    g.addColorStop(0, withAlpha(c, 0.45));
+    g.addColorStop(1, c);
+    roundRect(ctx, -iw / 2, -ih / 2, fw, ih, thick / 2);
+  } else {
+    const fh = Math.max(thick, ih * val);
+    g = ctx.createLinearGradient(0, ih / 2, 0, -ih / 2);
+    g.addColorStop(0, withAlpha(c, 0.45));
+    g.addColorStop(1, c);
+    roundRect(ctx, -iw / 2, ih / 2 - fh, iw, fh, thick / 2);
+  }
+  ctx.fillStyle = g;
   ctx.fill();
   ctx.restore();
+  // işaretler
+  const ls = num(el.labelSize, 24);
   (el.marks || []).forEach((m) => {
     const v = clamp(num(m.v, 0));
     const reached = val >= v - 0.001;
-    ctx.font = `800 ${num(el.labelSize, 40)}px ${FONTS.display}`;
+    ctx.save();
+    ctx.font = `800 ${ls}px ${FONTS.display}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = `${(ls * 0.12).toFixed(1)}px`;
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = reached ? color(m.color, theme, c) : 'rgba(255,255,255,0.8)';
-    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-    ctx.lineWidth = 3;
+    ctx.fillStyle = reached ? color(m.color, theme, c) : 'rgba(255,255,255,0.7)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.lineWidth = 2;
+    const label = String(m.label ?? '').toLocaleUpperCase('tr-TR');
     if (horizontal) {
-      const x = -bw / 2 + bw * v;
+      const x = -iw / 2 + iw * v;
       ctx.beginPath();
-      ctx.moveTo(x, -bh / 2 - 22);
-      ctx.lineTo(x, bh / 2 + 22);
+      ctx.moveTo(x, -bh / 2 - 10);
+      ctx.lineTo(x, bh / 2 + 10);
       ctx.stroke();
       ctx.textAlign = 'center';
-      ctx.fillText(m.label, x, bh / 2 + 60);
+      ctx.fillText(label, x, bh / 2 + 10 + ls);
     } else {
-      const y = bh / 2 - bh * v;
+      const y = ih / 2 - ih * v;
       ctx.beginPath();
-      ctx.moveTo(-bw / 2 - 40, y);
-      ctx.lineTo(bw / 2 + 22, y);
+      ctx.moveTo(-bw / 2 - 18, y);
+      ctx.lineTo(-bw / 2 - 4, y);
       ctx.stroke();
       ctx.textAlign = 'right';
-      ctx.fillText(m.label, -bw / 2 - 52, y);
+      ctx.fillText(label, -bw / 2 - 28, y);
     }
+    ctx.restore();
   });
 }
 
@@ -605,8 +655,9 @@ function drawArt(ctx, el, env) {
     return;
   }
   if (el.glow) {
-    ctx.shadowColor = color(el.glow === true ? null : el.glow, env.theme, env.theme.accent2);
-    ctx.shadowBlur = 60;
+    // yarı saydam ışıma: tam doygun renk çizimin çevresinde "çıkartma" kenarı gibi görünür
+    ctx.shadowColor = withAlpha(color(el.glow === true ? null : el.glow, env.theme, env.theme.accent2), 0.55);
+    ctx.shadowBlur = 50;
   } else {
     ctx.shadowColor = 'rgba(0,0,0,0.45)';
     ctx.shadowBlur = 40;
@@ -615,10 +666,66 @@ function drawArt(ctx, el, env) {
   // oranı koru: çizim kutuya sığdırılır
   const iw = img.naturalWidth || img.width || w, ih = img.naturalHeight || img.height || h;
   const k = Math.min(w / iw, h / ih);
-  ctx.drawImage(img, (-iw * k) / 2, (-ih * k) / 2, iw * k, ih * k);
+  const dw = iw * k, dh = ih * k;
+  ctx.drawImage(featheredArt(img, dw, dh), -dw / 2, -dh / 2, dw, dh);
+}
+
+// "#rgb" / "#rrggbb" / "rgb()" rengine saydamlık ekler; çözülemeyen renk aynen döner.
+function withAlpha(c, a) {
+  const s = String(c || '').trim();
+  let m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(s);
+  if (m) {
+    let h = m[1];
+    if (h.length === 3) h = h.replace(/./g, (x) => x + x);
+    const n = parseInt(h, 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+  m = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i.exec(s);
+  return m ? `rgba(${m[1]},${m[2]},${m[3]},${a})` : s;
+}
+
+// Yapay zekâ çizimleri kenara kadar taşan hale/ışık/zemin bırakabilir; viewBox bunları
+// sert bir dikdörtgen kenarla keser. Çizim bir kez önbellek tuvaline basılır ve kenarları
+// yumuşakça saydamlaşır (iyi çizimlerde kenar boşluğu zaten boştur, fark görünmez).
+// Önbellek ayrıca karmaşık SVG'nin her karede yeniden taranmasını önler.
+const ART_CACHE = new WeakMap();
+function featheredArt(img, dw, dh) {
+  const s = Math.min(1.25, 1400 / Math.max(dw, dh, 1)); // kamera yakınlaşmasında net kalsın
+  const cw = Math.max(1, Math.round(dw * s)), ch = Math.max(1, Math.round(dh * s));
+  const key = cw + 'x' + ch;
+  let byKey = ART_CACHE.get(img);
+  if (!byKey) ART_CACHE.set(img, (byKey = new Map()));
+  const hit = byKey.get(key);
+  if (hit) return hit;
+  let cv;
+  try {
+    cv = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(cw, ch) : Object.assign(document.createElement('canvas'), { width: cw, height: ch });
+    const g = cv.getContext('2d');
+    g.drawImage(img, 0, 0, cw, ch);
+    g.globalCompositeOperation = 'destination-in';
+    const f = 0.04;
+    const edge = (x0, y0, x1, y1) => {
+      const gr = g.createLinearGradient(x0, y0, x1, y1);
+      gr.addColorStop(0, 'rgba(0,0,0,0)');
+      gr.addColorStop(f, 'rgba(0,0,0,1)');
+      gr.addColorStop(1 - f, 'rgba(0,0,0,1)');
+      gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr;
+      g.fillRect(0, 0, cw, ch);
+    };
+    edge(0, 0, cw, 0);
+    edge(0, 0, 0, ch);
+  } catch (_) {
+    return img; // tuval oluşturulamazsa çizim olduğu gibi kullanılır
+  }
+  if (byKey.size >= 3) byKey.delete(byKey.keys().next().value);
+  byKey.set(key, cv);
+  return cv;
 }
 
 const DRAWERS = {
+  ...HUD_DRAWERS,
+  ...SCENERY_DRAWERS,
   text: drawText,
   counter: drawCounter,
   gear: drawGear,
@@ -667,10 +774,13 @@ function drawElement(ctx, el, sc, t, env) {
   // çıkış
   if (until !== null) {
     const outT = t - sc.start - until;
-    if (outT > 0.3) return;
+    // outTo: 0..1 → öğe tamamen kaybolmaz, yavaşça bu opaklığa silikleşir ("ortadan kayboldu" anları)
+    const outTo = Number.isFinite(Number(el.outTo)) ? clamp(Number(el.outTo)) : null;
+    const outDur = num(el.outDur, outTo !== null ? 1.4 : 0.3);
+    if (outT > outDur && !outTo) return;
     if (outT > 0) {
-      const k = clamp(outT / 0.3);
-      alpha *= 1 - k;
+      const k = outTo !== null ? easeInOut(clamp(outT / outDur)) : clamp(outT / outDur);
+      alpha *= 1 - k * (1 - (outTo || 0));
       if (el.out === 'zoom') sx = sy = sx * (1 + k * 0.4);
       if (el.out === 'slideUp') dy -= k * 140;
     }
@@ -810,17 +920,26 @@ function drawCaptions(ctx, t, env) {
 export function renderFrame(ctx, t, env) {
   const theme = env.theme || DEFAULT_THEME;
   ctx.save();
-  drawBackground(ctx, t, theme);
   const scenes = env.timeline?.scenes || [];
   const idx = scenes.findIndex((s) => t >= s.start && t < s.end);
   const cur = idx >= 0 ? scenes[idx] : scenes[scenes.length - 1];
+  const bgOf = (sc) => backgroundName(sc?.scene?.background) || backgroundName(env.background) || 'grid';
+  const tr = 0.3;
+  const local = cur ? t - cur.start : 0;
+  const prev = cur && idx > 0 ? scenes[idx - 1] : null;
+  const inTransition = !!(prev && local < tr);
+  const k = inTransition ? easeOutCubic(local / tr) : 1;
+  // arka plan: sahneler arasında farklıysa yumuşak geçiş
+  const bgCur = bgOf(cur);
+  if (inTransition && bgOf(prev) !== bgCur) {
+    drawBackground(ctx, t, theme, bgOf(prev));
+    drawBackgroundOver(ctx, t, theme, bgCur, k);
+  } else {
+    drawBackground(ctx, t, theme, bgCur);
+  }
   if (cur) {
-    const tr = 0.3;
-    const local = t - cur.start;
-    const prev = idx > 0 ? scenes[idx - 1] : null;
-    if (prev && local < tr) {
+    if (inTransition) {
       // önceki sahne son karesinde donar, yenisi üstüne gelir
-      const k = easeOutCubic(local / tr);
       ctx.save();
       ctx.globalAlpha = 1 - k;
       drawScene(ctx, prev, Math.min(t, prev.end - 0.001), { ...env, theme });
@@ -861,6 +980,7 @@ export function buildEnv(project, images) {
   const groups = captionGroups(words, project.settings?.captionChars || 16, project.settings?.captionWords || 3);
   return {
     theme,
+    background: backgroundName(project.plan?.background) || 'grid',
     images: images || {},
     timeline,
     duration: timeline.duration,

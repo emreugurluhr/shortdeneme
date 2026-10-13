@@ -1,8 +1,10 @@
 // Shorts Atölyesi — arayüz ve üretim akışı.
-import { W, H, renderFrame, buildEnv, elementStart } from './engine.js';
+import { W, H, renderFrame, buildEnv, elementStart, backgroundName } from './engine.js';
 import { cleanForTTS, stripTags, wordsFromAlignment, estimateWords, segmentsFromWords } from './script.js';
 import { textToSpeech, soundEffect, voiceName } from './eleven.js';
-import { ask, askJSON, scriptPrompt, planPrompt, scenePrompt, artPrompt, extractSVG, PROVIDERS, providerConfig, listModels } from './llm.js';
+import { ask, askJSON, scriptPrompt, planPrompt, scenePrompt, extractSVG, PROVIDERS, providerConfig, listModels } from './llm.js';
+import { artPrompt, critiquePrompt, ART_STYLES } from './artguide.js';
+import { lintPlan } from './layout.js';
 import { audioCtx, decodeAudio, mixAudio, loadFonts, loadImages, svgToImage, exportVideo } from './media.js';
 import { loadSettings, saveSettings, saveProject, loadProject } from './store.js';
 import { setProxy } from './net.js';
@@ -91,6 +93,24 @@ function requireAI() {
   if (!cfg.key || (cfg.kind === 'openai' && !cfg.base)) {
     openSettings();
     throw new Error(`Senaryo ve çizim için Ayarlar’a ${cfg.label} API anahtarınızı girin.`);
+  }
+}
+
+// Çizim çağrıları için ayarlar: "Çizim modeli" seçiliyse o sağlayıcının kayıtlı
+// anahtarı/adresi kullanılır; model kutusu doluysa sadece çizimlerde o model çağrılır.
+function artSettings(s = state.settings) {
+  const id = PROVIDERS[s.artProvider] ? s.artProvider : PROVIDERS[s.provider] ? s.provider : 'claude';
+  const out = { ...s, provider: id };
+  const model = String(s.artModel || '').trim();
+  if (model) out[`${id}Model`] = model;
+  return out;
+}
+
+function requireArtAI() {
+  const cfg = providerConfig(artSettings());
+  if (!cfg.key || (cfg.kind === 'openai' && !cfg.base)) {
+    openSettings();
+    throw new Error(`Çizim modeli için Ayarlar’a ${cfg.label} API anahtarını girin (ya da "Çizim modeli" olarak "Aynı sağlayıcı"yı seçin).`);
   }
 }
 
@@ -201,6 +221,14 @@ function renderScenes() {
     redo.textContent = 'Yeniden tasarla';
     redo.addEventListener('click', () => run('redo', () => redoScene(sc.index)));
     actions.append(redo);
+    const fixes = lintNotesFor(sc.index);
+    if (fixes.length && !state.project.demo) {
+      const fx = document.createElement('span');
+      fx.className = 'status lint';
+      fx.textContent = `${fixes.length} otomatik düzeltme`;
+      fx.title = fixes.join('\n');
+      actions.append(fx);
+    }
     const missing = (sc.scene.elements || []).filter((e) => e.type === 'art' && !state.images[e.id]);
     if (missing.length && !state.project.demo) {
       const st = document.createElement('span');
@@ -213,6 +241,12 @@ function renderScenes() {
     box.append(card);
     drawThumb(cv, sc);
   });
+}
+
+// Düzelticinin (layout.js) bu sahne için yaptığı değişiklikler ("Sahne N: …").
+function lintNotesFor(index) {
+  const tag = `Sahne ${index + 1}: `;
+  return (state.project.lintNotes || []).filter((n) => n.startsWith(tag)).map((n) => n.slice(tag.length));
 }
 
 function drawThumb(cv, sc) {
@@ -427,7 +461,32 @@ function normalizePlan(plan) {
   const theme = {};
   if (/^#[0-9a-f]{6}$/i.test(plan.theme?.accent || '')) theme.accent = plan.theme.accent;
   if (/^#[0-9a-f]{6}$/i.test(plan.theme?.accent2 || '')) theme.accent2 = plan.theme.accent2;
-  return { theme, ambience: typeof plan.ambience === 'string' ? plan.ambience : null, scenes };
+  scenes.forEach((s) => {
+    const bg = backgroundName(s.background);
+    if (bg) s.background = bg;
+    else delete s.background;
+  });
+  const out = { theme, ambience: typeof plan.ambience === 'string' ? plan.ambience : null, scenes };
+  const bg = backgroundName(plan.background);
+  if (bg) out.background = bg;
+  const style = String(plan.artStyle || '').trim().toLowerCase();
+  if (ART_STYLES[style]) out.artStyle = style;
+  return out;
+}
+
+// Zayıf modellerin planını çizimden önce düzeltir (güvenli alan, altyazı bandı,
+// tek başlık, yazı–görsel çakışması…). Notlar sahne kartlarında sayı olarak görünür.
+function lintProjectPlan(plan) {
+  const p = state.project;
+  const { plan: fixed, notes } = lintPlan(plan, {
+    words: p.words,
+    segments: p.segments,
+    duration: p.duration,
+    captions: state.settings.captions !== false,
+  });
+  p.lintNotes = notes;
+  if (notes.length) console.info(`Plan düzeltici: ${notes.length} değişiklik`, notes);
+  return fixed;
 }
 
 function assignArts(scenes, salt = '') {
@@ -448,36 +507,59 @@ function assignArts(scenes, salt = '') {
   );
 }
 
+// Tek bir çizim: istem → SVG; "Çizimleri ikinci kez iyileştir" açıksa model kendi
+// SVG'sini gözden geçirip düzeltir. İkinci geçiş bozuk çıkarsa ilk çizim kalır.
+async function drawOneArt(a, plan) {
+  const s = artSettings();
+  const opts = { maxTokens: 24000, effort: 'medium' };
+  const first = extractSVG(await ask(s, artPrompt({ art: a.prompt, w: a.w, h: a.h, theme: plan.theme, style: plan.artStyle }), opts));
+  const firstImg = await svgToImage(first);
+  if (!state.settings.refineArt) return { svg: first, img: firstImg };
+  try {
+    const svg = extractSVG(await ask(s, critiquePrompt({ art: a.prompt, svg: first, w: a.w, h: a.h }), opts));
+    const img = await svgToImage(svg);
+    a.refined = true;
+    return { svg, img };
+  } catch (e) {
+    console.warn('çizim iyileştirme atlandı', e);
+    return { svg: first, img: firstImg };
+  }
+}
+
 async function drawArts() {
   const p = state.project;
   const todo = Object.entries(p.arts || {}).filter(([, a]) => !a.svg);
   if (!todo.length) return;
+  requireArtAI();
   let done = 0, failed = 0;
-  setStatus(3, `Görseller çiziliyor… 0/${todo.length}`);
+  const refine = state.settings.refineArt ? ' (iki geçiş)' : '';
+  setStatus(3, `Görseller çiziliyor${refine}… 0/${todo.length}`);
   await pool(todo, 3, async ([id, a]) => {
     try {
       a.error = null;
-      const text = await ask(state.settings, artPrompt({ art: a.prompt, w: a.w, h: a.h, theme: p.plan.theme }), { maxTokens: 24000, effort: 'medium' });
-      a.svg = extractSVG(text);
-      state.images[id] = await svgToImage(a.svg);
+      const { svg, img } = await drawOneArt(a, p.plan);
+      a.svg = svg;
+      state.images[id] = img;
     } catch (e) {
       console.warn('çizim', id, e);
       a.error = e.message;
       failed++;
     }
     done++;
-    setStatus(3, `Görseller çiziliyor… ${done}/${todo.length}`);
+    setStatus(3, `Görseller çiziliyor${refine}… ${done}/${todo.length}`);
     rebuildEnv();
     renderScenes();
     updateButtons();
   });
   await persist();
+  const fixes = p.lintNotes?.length ? ` · ${p.lintNotes.length} otomatik yerleşim düzeltmesi` : '';
   if (failed) setStatus(3, `${failed} görsel çizilemedi. "Yeniden tasarla" ile o sahneyi tekrar deneyin.`, 'err');
-  else setStatus(3, 'Sahneler ve görseller hazır.', 'ok');
+  else setStatus(3, `Sahneler ve görseller hazır${fixes}.`, 'ok');
 }
 
 async function direct() {
   requireAI();
+  requireArtAI();
   const p = state.project;
   if (!p.words?.length) throw new Error('Önce metni seslendirin.');
   setStatus(3, 'Sahneler tasarlanıyor… (bu adım 1–2 dakika sürebilir)');
@@ -486,7 +568,7 @@ async function direct() {
     planPrompt({ title: p.title, segments: p.segments, duration: p.duration, maxSfx: Number(state.settings.maxSfx) || 0 }),
     { maxTokens: 32000, effort: 'medium' },
   );
-  const plan = normalizePlan(raw);
+  const plan = lintProjectPlan(normalizePlan(raw));
   assignArts(plan.scenes);
   p.plan = plan;
   p.sfx = [];
@@ -500,14 +582,25 @@ async function direct() {
 
 async function redoScene(index) {
   requireAI();
+  requireArtAI();
   const p = state.project;
   const old = p.plan.scenes[index];
   setStatus(3, `${index + 1}. sahne yeniden tasarlanıyor…`);
   const raw = await askJSON(state.settings, scenePrompt({ scene: old, segments: p.segments, plan: p.plan, index }), { maxTokens: 16000, effort: 'medium' });
   const sc = { ...raw, from: old.from, to: old.to, elements: Array.isArray(raw.elements) ? raw.elements.filter((e) => e && e.type) : [], sfx: Array.isArray(raw.sfx) ? raw.sfx : old.sfx || [] };
+  const bg = backgroundName(sc.background);
+  if (bg) sc.background = bg;
+  else delete sc.background;
+  // yeni sahne planın içinde düzeltilir: cue zamanları ve kapak kuralı tüm planla tutarlı kalsın
+  const scenes = p.plan.scenes.slice();
+  scenes[index] = sc;
+  // diğer sahneler zaten düzeltilmiş: ikinci geçiş not üretmez, eski notları korunur
+  const tag = `Sahne ${index + 1}: `;
+  const kept = (p.lintNotes || []).filter((n) => !n.startsWith(tag));
+  p.plan = lintProjectPlan({ ...p.plan, scenes });
+  p.lintNotes = [...kept, ...p.lintNotes.filter((n) => !kept.includes(n))];
   // bu sahnenin görselleri baştan çizilsin diye yeni kimlik ver
-  assignArts([sc], ':' + Date.now());
-  p.plan.scenes[index] = sc;
+  assignArts([p.plan.scenes[index]], ':' + Date.now());
   await persist();
   renderAll();
   await drawArts();
@@ -570,7 +663,8 @@ async function makeSfx() {
   state.ambienceBuf = null;
   invalidateAudio();
   await persist();
-  setStatus(3, failed ? `${failed} efekt sesi üretilemedi; video onlarsız da oluşturulabilir.` : 'Sahneler, görseller ve efekt sesleri hazır.', failed ? 'err' : 'ok');
+  const fixes = p.lintNotes?.length ? ` · ${p.lintNotes.length} otomatik yerleşim düzeltmesi` : '';
+  setStatus(3, failed ? `${failed} efekt sesi üretilemedi; video onlarsız da oluşturulabilir.` : `Sahneler, görseller ve efekt sesleri hazır${fixes}.`, failed ? 'err' : 'ok');
 }
 
 async function makeVideo() {
@@ -619,19 +713,20 @@ async function doAll() {
 }
 
 // ---------------------------------------------------------------- ayarlar
-const settingFields = ['elevenKey', 'voiceId', 'modelId', 'stability', 'maxSfx', 'captionWords', 'proxyUrl'];
+const settingFields = ['elevenKey', 'voiceId', 'modelId', 'stability', 'maxSfx', 'captionWords', 'proxyUrl', 'artModel'];
 // Pencere açıkken düzenlenen kopya: sağlayıcı değiştirince alanlar burada saklanır.
 let draft = null;
 let shownProvider = null;
 
-$('provider').append(
-  ...Object.entries(PROVIDERS).map(([id, p]) => {
+const providerOptions = () =>
+  Object.entries(PROVIDERS).map(([id, p]) => {
     const o = document.createElement('option');
     o.value = id;
     o.textContent = p.label;
     return o;
-  }),
-);
+  });
+$('provider').append(...providerOptions());
+$('artProvider').append(...providerOptions());
 
 function stashProvider() {
   if (!shownProvider) return;
@@ -667,26 +762,67 @@ function showProvider(id) {
   }
 }
 
+// "Çizim modeli": sağlayıcının kayıtlı anahtarını kullanır, model sadece çizimler için.
+function showArtProvider() {
+  const id = $('artProvider').value;
+  const scriptId = $('provider').value;
+  const useId = PROVIDERS[id] ? id : scriptId;
+  const cfg = providerConfig({ ...draft, provider: useId });
+  $('artModel').placeholder = `boş bırakılırsa: ${cfg.model || 'sağlayıcının modeli'}`;
+  fillSelect($('artModelSelect'), PROVIDERS[useId].models || [], $('artModel').value);
+  let note;
+  if (!PROVIDERS[id]) note = 'Senaryo için seçili sağlayıcı ve anahtar kullanılır. Model kutusu doluysa çizimler o modelle yapılır.';
+  else if (!cfg.key || (cfg.kind === 'openai' && !cfg.base)) note = `⚠ ${cfg.label} için kayıtlı anahtar yok. Yukarıdaki "Sağlayıcı" listesinden bu seçeneği seçip anahtarını girin, sonra senaryo sağlayıcınızı geri seçin; iki anahtar da saklanır.`;
+  else note = `${cfg.label} için kayıtlı anahtar kullanılacak. Örnek güçlü çizim modelleri: Claude, OpenCode Go’da deepseek-v4-pro, glm-5.2, kimi-k2.7-code.`;
+  $('artNote').textContent = note;
+}
+let artProviderShown = null;
+$('artProvider').addEventListener('change', () => {
+  stashProvider();
+  // önceki sağlayıcının modeli yeni sağlayıcıda yoksa kutuyu boşalt (ör. Claude'a "deepseek-v4-pro" gitmesin)
+  const useId = (id) => (PROVIDERS[id] ? id : $('provider').value);
+  const before = PROVIDERS[useId(artProviderShown)]?.models || [];
+  const after = PROVIDERS[useId($('artProvider').value)]?.models || [];
+  const m = $('artModel').value.trim();
+  if (m && before.includes(m) && !after.includes(m)) $('artModel').value = '';
+  artProviderShown = $('artProvider').value;
+  showArtProvider();
+});
+$('artModelSelect').addEventListener('change', (e) => {
+  if (e.target.value) $('artModel').value = e.target.value;
+});
+$('aiKey').addEventListener('change', () => {
+  stashProvider();
+  showArtProvider();
+});
+
 function openSettings() {
   const s = state.settings;
   draft = { ...s };
   settingFields.forEach((k) => ($(k).value = s[k] ?? ''));
+  $('artProvider').value = PROVIDERS[s.artProvider] ? s.artProvider : '';
+  artProviderShown = $('artProvider').value;
+  $('refineArt').checked = !!s.refineArt;
   $('ambience').checked = !!s.ambience;
   $('captions').checked = s.captions !== false;
   $('provider').value = PROVIDERS[s.provider] ? s.provider : 'claude';
   shownProvider = null;
   showProvider($('provider').value);
+  showArtProvider();
   $('settings').showModal();
 }
 
 $('provider').addEventListener('change', () => {
   stashProvider();
   showProvider($('provider').value);
+  showArtProvider();
 });
 
 // Model listesi: açılır menüden seçince model kutusuna yazılır (iPhone'da da çalışır).
 function fillModelSelect(models) {
-  const sel = $('aiModelSelect');
+  fillSelect($('aiModelSelect'), models, $('aiModel').value);
+}
+function fillSelect(sel, models, current) {
   sel.textContent = '';
   if (!models.length) {
     sel.hidden = true;
@@ -702,7 +838,7 @@ function fillModelSelect(models) {
     o.textContent = m;
     sel.append(o);
   });
-  sel.value = models.includes($('aiModel').value) ? $('aiModel').value : '';
+  sel.value = models.includes(current) ? current : '';
   sel.hidden = false;
 }
 $('aiModelSelect').addEventListener('change', (e) => {
@@ -737,6 +873,8 @@ $('settings').addEventListener('close', async () => {
   const s = { ...draft };
   settingFields.forEach((k) => (s[k] = $(k).value.trim()));
   s.provider = $('provider').value;
+  s.artProvider = PROVIDERS[$('artProvider').value] ? $('artProvider').value : '';
+  s.refineArt = $('refineArt').checked;
   s.stability = Number(s.stability);
   s.maxSfx = Math.max(0, Math.min(15, Number(s.maxSfx) || 0));
   s.captionWords = Math.max(1, Math.min(5, Number(s.captionWords) || 3));
@@ -745,7 +883,7 @@ $('settings').addEventListener('close', async () => {
   state.settings = s;
   applyProxy();
   if (!saveSettings(s)) toast('Ayarlar bu tarayıcıda kaydedilemedi (gizli sekme olabilir).', true);
-  else toast(`Ayarlar kaydedildi · ${PROVIDERS[s.provider].label}`);
+  else toast(`Ayarlar kaydedildi · ${PROVIDERS[s.provider].label}${s.artProvider || s.artModel ? ` · çizim: ${providerConfig(artSettings(s)).model}` : ''}`);
   invalidateAudio();
   rebuildEnv();
   if (s.elevenKey && s.voiceId) {

@@ -99,7 +99,7 @@
       <p class="note">Anahtar izinleri: Text to Speech ve Sound Effects → Access. <span id="voiceCheck"></span></p>
     </fieldset>
     <fieldset>
-      <legend>Senaryo ve çizim (yapay zekâ)</legend>
+      <legend>Senaryo ve sahneler (yapay zekâ)</legend>
       <label for="provider">Sağlayıcı</label>
       <select id="provider"></select>
       <label for="aiKey">API anahtarı</label>
@@ -115,6 +115,18 @@
       </div>
       <select id="aiModelSelect" aria-label="Model listesi" hidden></select>
       <p class="note" id="aiNote"></p>
+    </fieldset>
+    <fieldset>
+      <legend>Çizim modeli</legend>
+      <p class="note">Senaryo ve sahne planını ucuz/hızlı bir modelle yazıp görselleri daha güçlü bir modele çizdirebilirsiniz.</p>
+      <label for="artProvider">Sağlayıcı</label>
+      <select id="artProvider"><option value="">Aynı sağlayıcı</option></select>
+      <label for="artModel">Model</label>
+      <input type="text" id="artModel" spellcheck="false" autocapitalize="off" autocomplete="off">
+      <select id="artModelSelect" aria-label="Çizim modeli listesi" hidden></select>
+      <p class="note" id="artNote"></p>
+      <label class="check"><input type="checkbox" id="refineArt"> Çizimleri ikinci kez iyileştir</label>
+      <p class="note">Model her çizimi bir kez daha gözden geçirip düzeltir. Sonuç daha iyi olur ama çizim süresi ve maliyeti iki katına çıkar.</p>
     </fieldset>
     <fieldset>
       <legend>Bağlantı (isteğe bağlı)</legend>

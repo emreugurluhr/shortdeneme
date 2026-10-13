@@ -100,7 +100,7 @@ textarea { resize: vertical; min-height: 90px; }
 .row > select { width: auto; }
 .row.tight { margin-top: 0; flex-wrap: nowrap; }
 .row.tight input { flex: 1; min-width: 0; }
-#aiModelSelect { margin-top: 8px; }
+#aiModelSelect, #artModelSelect { margin-top: 8px; }
 
 .btn {
   border: 1px solid var(--line);
@@ -121,6 +121,7 @@ textarea { resize: vertical; min-height: 90px; }
 .status { color: var(--muted); font-size: 14px; }
 .status.err { color: var(--bad); }
 .status.ok { color: var(--ok); }
+.status.lint { font-size: 12px; opacity: .75; align-self: center; cursor: help; }
 .meta { display: flex; gap: 16px; flex-wrap: wrap; color: var(--muted); font-size: 13px; margin-top: 8px; }
 .meta b { color: var(--fg); font-family: var(--font-num); font-size: 16px; }
 
