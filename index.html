@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shorts Atölyesi</title>
+<meta name="description" content="Bir konu yaz; senaryo, seslendirme, animasyon, efekt sesleri ve altyazılı 9:16 Shorts videosu hazır olsun.">
+<link rel="preload" href="fonts/nunito-latin-900-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><h1>Shorts <span>Atölyesi</span></h1><small>konu → video</small></div>
+  <button class="btn" id="newBtn" type="button">Yeni proje</button>
+  <button class="btn" id="settingsBtn" type="button">Ayarlar</button>
+</header>
+
+<main class="layout">
+  <section class="steps">
+    <article class="card" id="card1">
+      <div class="card-head"><span class="step-no">1</span><h2>Konu</h2><span class="hint">Ne anlatalım?</span></div>
+      <textarea id="topic" rows="3" placeholder="Örn: 12 dişli ile ışıktan hızlı dönmek mümkün mü?"></textarea>
+      <div class="row">
+        <select id="seconds" aria-label="Video süresi">
+          <option value="30">30 sn</option>
+          <option value="45">45 sn</option>
+          <option value="60" selected>60 sn</option>
+          <option value="75">75 sn</option>
+          <option value="90">90 sn</option>
+        </select>
+        <button class="btn" id="writeBtn" type="button">Senaryoyu yaz</button>
+        <button class="btn primary" id="allBtn" type="button">Hepsini yap ▶</button>
+      </div>
+      <p class="status" id="status1"></p>
+    </article>
+
+    <article class="card" id="card2">
+      <div class="card-head"><span class="step-no">2</span><h2>Seslendirme metni</h2><span class="hint">Hazır metniniz varsa buraya yapıştırın</span></div>
+      <textarea id="script" spellcheck="false" placeholder="[quietly curious]&#10;1945 yılında…"></textarea>
+      <div class="meta"><span>Kelime: <b id="wordCount">0</b></span><span>Karakter: <b id="charCount">0</b></span><span>Tahmini süre: <b id="estDur">0</b> sn</span></div>
+      <div class="row">
+        <button class="btn" id="voiceBtn" type="button">Seslendir</button>
+        <audio id="voiceAudio" controls hidden></audio>
+      </div>
+      <p class="status" id="status2"></p>
+    </article>
+
+    <article class="card" id="card3">
+      <div class="card-head"><span class="step-no">3</span><h2>Sahneler ve sesler</h2><span class="hint">Görselleri Claude çizer</span></div>
+      <div class="row">
+        <button class="btn" id="directBtn" type="button">Sahneleri tasarla ve çiz</button>
+        <button class="btn" id="sfxBtn" type="button">Efekt seslerini üret</button>
+      </div>
+      <p class="status" id="status3"></p>
+      <div class="scenes" id="scenes"></div>
+      <ul class="list" id="sfxList"></ul>
+    </article>
+  </section>
+
+  <aside class="stage">
+    <div class="phone">
+      <canvas id="preview" width="540" height="960" aria-label="Video önizlemesi"></canvas>
+      <span class="badge" id="badge" hidden>Örnek proje · sessiz</span>
+    </div>
+    <div class="player">
+      <button class="play" id="playBtn" type="button" aria-label="Oynat">
+        <svg id="playIcon" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3l12 7-12 7z" fill="currentColor"/></svg>
+      </button>
+      <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Zaman">
+      <span class="time" id="time">0:00 / 0:00</span>
+    </div>
+    <div class="export">
+      <button class="btn gold" id="exportBtn" type="button">Videoyu oluştur (MP4)</button>
+      <progress id="exportProg" max="1" value="0" hidden></progress>
+      <p class="status" id="status4"></p>
+      <a class="download" id="downloadLink" hidden>Videoyu indir</a>
+    </div>
+  </aside>
+</main>
+
+<dialog id="settings">
+  <form method="dialog" id="settingsForm">
+    <h2>Ayarlar</h2>
+    <p class="note">Anahtarlar sadece bu tarayıcıda saklanır; hiçbir sunucuya ya da koda kaydedilmez.</p>
+    <fieldset>
+      <legend>ElevenLabs</legend>
+      <label for="elevenKey">API anahtarı</label>
+      <input type="password" id="elevenKey" autocomplete="off" placeholder="sk_…">
+      <div class="two">
+        <div><label for="voiceId">Ses ID</label><input type="text" id="voiceId"></div>
+        <div><label for="modelId">Model</label><input type="text" id="modelId"></div>
+      </div>
+      <label for="stability">Ses karakteri</label>
+      <select id="stability">
+        <option value="0">Yaratıcı (daha duygusal)</option>
+        <option value="0.5">Doğal</option>
+        <option value="1">Sabit</option>
+      </select>
+      <p class="note">Anahtar izinleri: Text to Speech ve Sound Effects → Access. <span id="voiceCheck"></span></p>
+    </fieldset>
+    <fieldset>
+      <legend>Senaryo ve çizim (yapay zekâ)</legend>
+      <label for="provider">Sağlayıcı</label>
+      <select id="provider">
+        <option value="claude">Claude (Anthropic)</option>
+        <option value="gemini">Gemini (Google)</option>
+      </select>
+      <div id="claudeFields">
+        <label for="claudeKey">Claude API anahtarı</label>
+        <input type="password" id="claudeKey" autocomplete="off" placeholder="sk-ant-…">
+        <label for="claudeModel">Model</label>
+        <input type="text" id="claudeModel">
+        <p class="note">Anahtarı <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> adresinden alabilirsiniz.</p>
+      </div>
+      <div id="geminiFields" hidden>
+        <label for="geminiKey">Gemini API anahtarı</label>
+        <input type="password" id="geminiKey" autocomplete="off">
+        <label for="geminiModel">Model</label>
+        <input type="text" id="geminiModel">
+        <p class="note">Anahtarı <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a> adresinden alabilirsiniz.</p>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Video</legend>
+      <div class="two">
+        <div><label for="maxSfx">En fazla efekt sesi</label><input type="number" id="maxSfx" min="0" max="15"></div>
+        <div><label for="captionWords">Altyazı kelime/satır</label><input type="number" id="captionWords" min="1" max="5"></div>
+      </div>
+      <label class="check"><input type="checkbox" id="ambience"> Arka planda ortam sesi</label>
+      <label class="check"><input type="checkbox" id="captions"> Altyazı göster</label>
+    </fieldset>
+    <div class="dialog-actions">
+      <button class="btn ghost" value="cancel" type="submit">Vazgeç</button>
+      <button class="btn primary" value="save" id="saveSettings" type="submit">Kaydet</button>
+    </div>
+  </form>
+</dialog>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
